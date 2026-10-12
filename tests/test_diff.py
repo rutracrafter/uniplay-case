@@ -179,3 +179,27 @@ def test_changes_are_deterministically_ordered(build: SnapshotBuilder) -> None:
     first = match_corpus(build("v1", docs_old), build("v2", docs_new), Config())
     second = match_corpus(build("v3", docs_old), build("v4", docs_new), Config())
     assert [c.describe() for c in first.changes] == [c.describe() for c in second.changes]
+
+
+# -- blocking width --------------------------------------------------------
+
+
+def test_block_width_keeps_a_window_alive_for_short_spans() -> None:
+    """A fixed width of 3 would miss an edit in the middle of a short sentence."""
+    from coursedrift.diff import block_width
+
+    assert block_width("one", 3) == 1
+    assert block_width("two words", 3) == 1
+    assert block_width("notice is 30 days.", 3) == 2
+    assert block_width("a b c d e f", 3) == 3
+    assert block_width("a b c d e f g h i j", 3) == 3
+
+
+def test_short_sentence_edit_is_modified_not_delete_plus_add(
+    build: SnapshotBuilder,
+) -> None:
+    """The regression for the blocking bug: four words, one changed."""
+    old = build("v1", {"p.md": "# P\n\nNotice is 30 days.\n"})
+    new = build("v2", {"p.md": "# P\n\nNotice is 45 days.\n"})
+    result = match_corpus(old, new, Config())
+    assert [c.content for c in result.changes] == [ContentOp.MODIFIED]

@@ -8,9 +8,30 @@ produced and consumed by deterministic code.
 from __future__ import annotations
 
 from collections.abc import Iterator
+from enum import StrEnum
 from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
+
+
+class Route(StrEnum):
+    """Where an item ends up. The only four outcomes the system produces.
+
+    Nothing is ever applied automatically: AUTO_FIX_PROPOSED means a patch
+    passed every validator and is ready for a human to approve, not that it
+    has been written anywhere.
+    """
+
+    RETIRE_SUGGESTED = "RETIRE_SUGGESTED"
+    NEEDS_REVIEW = "NEEDS_REVIEW"
+    AUTO_FIX_PROPOSED = "AUTO_FIX_PROPOSED"
+    OK = "OK"
+
+    @property
+    def severity(self) -> int:
+        """Report ordering: lost content first, then work a human must do."""
+        return _SEVERITY[self]
+
 
 # ---------------------------------------------------------------------------
 # Source documents
@@ -171,3 +192,11 @@ class Course(BaseModel):
             if item.level_id not in seen:
                 seen.append(item.level_id)
         return seen
+
+
+_SEVERITY: dict[Route, int] = {
+    Route.RETIRE_SUGGESTED: 0,
+    Route.NEEDS_REVIEW: 1,
+    Route.AUTO_FIX_PROPOSED: 2,
+    Route.OK: 3,
+}

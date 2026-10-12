@@ -211,6 +211,25 @@ def shingles(text: str, width: int) -> set[tuple[str, ...]]:
     return {tuple(words[i : i + width]) for i in range(len(words) - width + 1)}
 
 
+def block_width(text: str, max_width: int) -> int:
+    """The widest window a single-token edit cannot destroy entirely.
+
+    With `n` words and window `w` there are `n - w + 1` windows, and an edit
+    at one position ruins at most `w` of them. Surviving at least one window
+    therefore needs `w <= n / 2`.
+
+    This matters more than it looks. At a fixed width of 3, the sentence
+    "Notice is 30 days." shares no trigram at all with "Notice is 45 days." —
+    the candidate pair is never scored, and an obvious edit comes out as a
+    REMOVED plus an ADDED instead of a MODIFIED. Short spans need short
+    windows.
+    """
+    count = len(text.split())
+    if count < 2:
+        return 1
+    return max(1, min(max_width, count // 2))
+
+
 def jaccard(left: frozenset[str], right: frozenset[str]) -> float:
     if not left and not right:
         return 0.0
@@ -316,15 +335,20 @@ def _phase_b_similarity(
     linear instead of quadratic: a pair is only scored if it shares at least
     one word n-gram.
     """
+    # New spans are indexed at every width from 1 up, because a query uses
+    # the width its own length allows and the two sides may differ in length.
     index: dict[tuple[str, ...], list[Span]] = defaultdict(list)
     for span in residue_new:
-        for shingle in shingles(match_key(span.norm_text), cfg.shingle_n):
-            index[shingle].append(span)
+        folded = match_key(span.norm_text)
+        for width in range(1, cfg.shingle_n + 1):
+            for shingle in shingles(folded, width):
+                index[shingle].append(span)
 
     scored: list[tuple[float, Span, Span]] = []
     for old_span in residue_old:
         candidates: dict[str, Span] = {}
-        for shingle in shingles(match_key(old_span.norm_text), cfg.shingle_n):
+        folded_old = match_key(old_span.norm_text)
+        for shingle in shingles(folded_old, block_width(folded_old, cfg.shingle_n)):
             for candidate in index.get(shingle, ()):
                 candidates[candidate.span_id] = candidate
         for candidate in candidates.values():
