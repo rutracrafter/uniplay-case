@@ -1,0 +1,50 @@
+[project]
+name = "coursedrift"
+version = "0.1.0"
+description = "Detect and remediate course content drift when source documents change"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.6",
+    "typer>=0.12",
+    "rapidfuzz>=3.6",
+    "httpx>=0.27",
+]
+
+[project.scripts]
+drift = "coursedrift.cli:app"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+    "mypy>=1.11",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["coursedrift"]
+
+[tool.ruff]
+line-length = 96
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+disallow_untyped_defs = true
+plugins = []
+
+[[tool.mypy.overrides]]
+module = ["rapidfuzz.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
