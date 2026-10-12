@@ -201,9 +201,29 @@ def match_key(text: str) -> str:
     return text.casefold()
 
 
+_EDGE_PUNCT = re.compile(r"^\W+|\W+$")
+
+
+def shingle_tokens(text: str) -> list[str]:
+    """Tokens for blocking, with edge punctuation stripped.
+
+    Blocking is a cheap filter, and punctuation must not decide what it
+    filters out. Leave it attached and "approve all leave requests." shares
+    no trigram with "...all leave requests require...", because one token
+    carries a full stop — so a plain reword is never even scored and comes
+    out as a delete plus an add.
+    """
+    out = []
+    for word in text.split():
+        trimmed = _EDGE_PUNCT.sub("", word)
+        if trimmed:
+            out.append(trimmed)
+    return out
+
+
 def shingles(text: str, width: int) -> set[tuple[str, ...]]:
     """Word n-grams used to block Phase B candidate pairs."""
-    words = text.split()
+    words = shingle_tokens(text)
     if not words:
         return set()
     if len(words) <= width:
@@ -224,7 +244,7 @@ def block_width(text: str, max_width: int) -> int:
     REMOVED plus an ADDED instead of a MODIFIED. Short spans need short
     windows.
     """
-    count = len(text.split())
+    count = len(shingle_tokens(text))
     if count < 2:
         return 1
     return max(1, min(max_width, count // 2))

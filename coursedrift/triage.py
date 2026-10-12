@@ -56,12 +56,28 @@ class Finding(BaseModel):
         return out
 
 
+def _dedupe(reasons: list[str]) -> list[str]:
+    """Keep reason order but drop repeats.
+
+    Phase 4 and phase 9 can both have something to say about the same fact —
+    inferred provenance, for instance — and a finding that states it twice
+    reads like a bug.
+    """
+    seen: set[str] = set()
+    out: list[str] = []
+    for reason in reasons:
+        if reason not in seen:
+            seen.add(reason)
+            out.append(reason)
+    return out
+
+
 def _base(candidate: ImpactCandidate, route: Route, reasons: list[str]) -> Finding:
     return Finding(
         item_id=candidate.item.item_id,
         level_id=candidate.item.level_id,
         route=route,
-        reasons=reasons,
+        reasons=_dedupe(reasons),
         changes=candidate.changes,
         anchors=candidate.anchors,
         inferred_provenance=candidate.inferred_provenance,
@@ -133,7 +149,7 @@ def route_candidate(
 
     def review(reason: str) -> Finding:
         return finding.model_copy(
-            update={"route": Route.NEEDS_REVIEW, "reasons": [*reasons, reason]}
+            update={"route": Route.NEEDS_REVIEW, "reasons": _dedupe([*reasons, reason])}
         )
 
     # 2 — nothing usable came back.
@@ -160,7 +176,7 @@ def route_candidate(
 
     # 6 — the fuzziest input in the system cannot auto-approve anything.
     if candidate.inferred_provenance:
-        return review("provenance was inferred, so this needs a human to confirm the source")
+        return review("provenance was inferred, not recorded")
 
     # 7 — same words, different context: the weakest case for text-only judgment.
     if candidate.has_reparenting:
@@ -173,7 +189,7 @@ def route_candidate(
         return finding.model_copy(
             update={
                 "route": Route.OK,
-                "reasons": [*reasons, "the change does not affect this question"],
+                "reasons": _dedupe([*reasons, "the change does not affect this question"]),
             }
         )
 
@@ -186,7 +202,7 @@ def route_candidate(
         return finding.model_copy(
             update={
                 "route": Route.NEEDS_REVIEW,
-                "reasons": [*reasons, f"no valid fix could be produced ({detail})"],
+                "reasons": _dedupe([*reasons, f"no valid fix could be produced ({detail})"]),
                 "rejected_patch": attempted,
             }
         )
@@ -195,11 +211,14 @@ def route_candidate(
     return finding.model_copy(
         update={
             "route": Route.AUTO_FIX_PROPOSED,
-            "reasons": [
-                *reasons,
-                f"verdict {adjudication.verdict.value} at confidence "
-                f"{adjudication.confidence:.2f}, and the proposed fix passed every validator",
-            ],
+            "reasons": _dedupe(
+                [
+                    *reasons,
+                    f"verdict {adjudication.verdict.value} at confidence "
+                    f"{adjudication.confidence:.2f}, and the proposed fix passed every "
+                    "validator",
+                ]
+            ),
             "patch": patch_outcome.value,
         }
     )
