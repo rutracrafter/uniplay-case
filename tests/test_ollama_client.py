@@ -34,11 +34,121 @@ def _client(handler: object) -> OllamaClient:
 
 
 def test_preflight_passes_when_the_model_is_present() -> None:
+    paths: list[str] = []
+
     def handler(request: httpx.Request) -> httpx.Response:
-        assert request.url.path == "/api/tags"
-        return httpx.Response(200, json={"models": [{"name": "qwen2.5:3b"}]})
+        paths.append(request.url.path)
+        if request.url.path == "/api/tags":
+            return httpx.Response(200, json={"models": [{"name": "qwen2.5:3b"}]})
+        return httpx.Response(200, json={"response": "ok"})
 
     _client(handler).preflight()
+    assert paths == ["/api/tags", "/api/generate"], "preflight checks, then warms"
+
+
+def test_preflight_can_skip_the_warm_up() -> None:
+    paths: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        paths.append(request.url.path)
+        return httpx.Response(200, json={"models": [{"name": "qwen2.5:3b"}]})
+
+    _client(handler).preflight(warm=False)
+    assert paths == ["/api/tags"]
+
+
+def test_a_failed_warm_up_is_not_fatal() -> None:
+    """The first real call will report whatever is wrong, properly."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/tags":
+            return httpx.Response(200, json={"models": [{"name": "qwen2.5:3b"}]})
+        raise httpx.ConnectError("gone away")
+
+    _client(handler).preflight()  # must not raise
+
+
+# -- thinking models -------------------------------------------------------
+#
+# The bug these cover: a thinking model spends almost all of its generation on
+# a trace returned in a separate `thinking` field, which this client discards.
+# Measured on qwen3.5:9b, one adjudication prompt took 1432 tokens and 36.6s
+# against a 30s timeout; with thinking disabled, 78 tokens and 1.7s for the
+# same verdict.
+
+
+def _tags(*models: dict[str, object]) -> object:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/tags":
+            return httpx.Response(200, json={"models": list(models)})
+        return httpx.Response(200, json={"response": json.dumps(GOOD)})
+
+    return handler
+
+
+def test_preflight_records_a_thinking_capability() -> None:
+    client = _client(_tags({"name": "qwen3.5:9b", "capabilities": ["completion", "thinking"]}))
+    client.model = "qwen3.5:9b"
+    client.preflight()
+    assert client.thinking_capable is True
+
+
+def test_preflight_records_the_absence_of_thinking() -> None:
+    client = _client(_tags({"name": "qwen2.5:3b", "capabilities": ["completion", "tools"]}))
+    client.preflight()
+    assert client.thinking_capable is False
+
+
+def test_thinking_is_disabled_for_a_thinking_model() -> None:
+    bodies: list[dict[str, object]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/tags":
+            return httpx.Response(
+                200,
+                json={"models": [{"name": "qwen3.5:9b", "capabilities": ["thinking"]}]},
+            )
+        bodies.append(json.loads(request.content))
+        return httpx.Response(200, json={"response": json.dumps(GOOD)})
+
+    client = _client(handler)
+    client.model = "qwen3.5:9b"
+    client.preflight()
+    client.complete("PROMPT", timeout=5.0)
+    assert bodies[-1]["think"] is False
+
+
+def test_the_think_field_is_not_sent_to_a_model_without_the_capability() -> None:
+    """Gated rather than always-on, so this does not depend on how leniently a
+    given Ollama version treats an inapplicable field."""
+    bodies: list[dict[str, object]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/tags":
+            return httpx.Response(200, json={"models": [{"name": "qwen2.5:3b"}]})
+        bodies.append(json.loads(request.content))
+        return httpx.Response(200, json={"response": json.dumps(GOOD)})
+
+    client = _client(handler)
+    client.preflight()
+    client.complete("PROMPT", timeout=5.0)
+    assert "think" not in bodies[-1]
+
+
+def test_generation_is_capped() -> None:
+    """A model that starts repeating itself must not run to the context limit."""
+    seen: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.update(json.loads(request.content))
+        return httpx.Response(200, json={"response": json.dumps(GOOD)})
+
+    transport = httpx.MockTransport(handler)
+    client = OllamaClient(
+        model="qwen2.5:3b", http=httpx.Client(transport=transport), max_output_tokens=256
+    )
+    client.complete("PROMPT", timeout=5.0)
+    assert seen["options"] == {"temperature": 0, "seed": 0, "num_predict": 256}
 
 
 def test_preflight_matches_an_implicit_latest_tag() -> None:
@@ -90,7 +200,7 @@ def test_request_shape_is_deterministic() -> None:
     assert seen["model"] == "qwen2.5:3b"
     assert seen["stream"] is False
     assert seen["format"] == "json"
-    assert seen["options"] == {"temperature": 0, "seed": 0}
+    assert seen["options"] == {"temperature": 0, "seed": 0, "num_predict": 1024}
     assert seen["prompt"] == "PROMPT"
 
 
@@ -105,7 +215,7 @@ def test_timeout_becomes_a_timeout_error() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         raise httpx.ReadTimeout("too slow")
 
-    with pytest.raises(TimeoutError):
+    with pytest.raises(TimeoutError, match="--timeout"):
         _client(handler).complete("p", timeout=1.0)
 
 

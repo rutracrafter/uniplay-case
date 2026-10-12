@@ -54,11 +54,16 @@ def run(
         bool,
         typer.Option("--fail-on-drift", help="Exit non-zero when drift is found, for CI."),
     ] = False,
+    timeout: Annotated[
+        float, typer.Option(help="Seconds to allow per model call. 0 keeps the config value.")
+    ] = 0.0,
 ) -> None:
     """Run drift detection over a pair of document snapshots."""
     cfg = Config.load(config)
     if votes:
         cfg = cfg.model_copy(update={"votes": votes})
+    if timeout:
+        cfg = cfg.model_copy(update={"timeout_s": timeout})
 
     if client == "none":
         _print_deterministic(prepare(old, new, course, cfg))
@@ -66,7 +71,7 @@ def run(
 
     failures = [mode.strip() for mode in fake_failures.split(",") if mode.strip()]
     try:
-        implementation = build_client(client, model, failures)
+        implementation = build_client(client, model, failures, cfg)
     except (ValueError, RuntimeError) as error:
         typer.secho(str(error), fg=typer.colors.RED, err=True)
         raise typer.Exit(code=2) from error
@@ -105,7 +110,7 @@ def demo(
     """
     cfg = Config()
     failures = [mode.strip() for mode in fake_failures.split(",") if mode.strip()]
-    implementation = build_client(client, model, failures)
+    implementation = build_client(client, model, failures, cfg)
     report = run_drift(
         FIXTURES / "docs_v1",
         FIXTURES / "docs_v2",
@@ -146,7 +151,7 @@ def seed(
     """
     cfg = Config.load(config)
     try:
-        implementation = build_client(client, model, [])
+        implementation = build_client(client, model, [], cfg)
     except (ValueError, RuntimeError) as error:
         typer.secho(str(error), fg=typer.colors.RED, err=True)
         raise typer.Exit(code=2) from error

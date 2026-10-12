@@ -58,6 +58,15 @@ class Config(BaseModel):
     max_calls: int = Field(default=500, ge=0)
     """Whole-run model call budget."""
 
+    max_output_tokens: int = Field(default=1024, ge=16)
+    """Ceiling on tokens a single response may generate.
+
+    Our responses run to roughly 90 tokens, so this is slack rather than a
+    constraint — its job is to stop a model that starts repeating itself from
+    generating until the context window is exhausted, which turns one bad
+    answer into one timeout.
+    """
+
     cache_dir: Path = Field(default=Path(".drift_cache"))
     """Where validated responses are memoized, keyed by client and prompt."""
 

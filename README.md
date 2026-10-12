@@ -9,7 +9,7 @@ everything else to a human with the evidence attached.
 ```bash
 uv sync        # once
 make demo      # seeded end-to-end run: no network, no model, no flags
-make test      # 309 tests
+make test      # 333 tests
 make check     # ruff + mypy
 ```
 
@@ -43,7 +43,18 @@ Useful flags: `--client none` stops after the deterministic stages and prints
 what they decided; `--votes 3` runs the adjudicator three times and escalates
 any disagreement; `--fake-failures timeout,malformed,schema,ungrounded`
 injects model failures to show the recovery paths; `--fail-on-drift` exits
-non-zero for CI.
+non-zero for CI; `--timeout 60` widens the per-call budget.
+
+**Thinking models.** A model that advertises a `thinking` capability spends
+most of its generation on a reasoning trace returned in a separate field,
+which this client discards. On qwen3.5:9b one adjudication prompt took 1432
+tokens and 36.6s — against the 30s default, so every call failed and every
+item fell through to review. Preflight now detects the capability and sends
+`think: false`, which brings the same prompt to 78 tokens and 1.7s for an
+identical verdict. Preflight also loads the model before the run starts, so a
+large model's load time is not charged to the first item's timeout, and
+generation is capped at `max_output_tokens` so a model that starts repeating
+itself cannot run to the context limit.
 
 ## How it works
 

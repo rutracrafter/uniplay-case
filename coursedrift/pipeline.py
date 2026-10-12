@@ -119,14 +119,20 @@ def judge_all(
     ]
 
 
-def build_client(name: str, model: str, failures: list[str] | None = None) -> LLMClient:
+def build_client(
+    name: str,
+    model: str,
+    failures: list[str] | None = None,
+    cfg: Config | None = None,
+) -> LLMClient:
     """Resolve a client name to an implementation."""
     if name == "fake":
         return FakeClient(failures=failures)
     if name == "ollama":
         from coursedrift.llm.ollama import OllamaClient
 
-        ollama = OllamaClient(model=model)
+        settings = cfg or Config()
+        ollama = OllamaClient(model=model, max_output_tokens=settings.max_output_tokens)
         ollama.preflight()
         return ollama
     raise ValueError(f"unknown client {name!r}; expected 'fake', 'ollama' or 'none'")
