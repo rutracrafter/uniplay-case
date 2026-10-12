@@ -13,6 +13,7 @@ from coursedrift.llm.cache import FileCache, NullCache
 from coursedrift.models import Route
 from coursedrift.pipeline import Prepared, build_client, prepare, run_drift
 from coursedrift.report import render_json, render_markdown
+from coursedrift.seed import seed_course
 
 app = typer.Typer(
     name="drift",
@@ -120,10 +121,59 @@ def demo(
 
 
 @app.command()
-def seed() -> None:
-    """Generate a course with recorded provenance from a document directory."""
-    typer.echo("drift seed: arrives in phase 8", err=True)
-    raise typer.Exit(code=1)
+def seed(
+    docs: Annotated[Path, typer.Option(help="Directory of Markdown to generate from.")],
+    out: Annotated[Path, typer.Option(help="Where to write the course JSON.")],
+    client: Annotated[str, typer.Option(help="Model client: fake or ollama.")] = "fake",
+    model: Annotated[
+        str, typer.Option(help="Model name, for the ollama client.")
+    ] = "qwen2.5:3b",
+    max_items: Annotated[int, typer.Option(help="How many questions to write.")] = 12,
+    title: Annotated[str, typer.Option(help="Course title.")] = "Seeded Course",
+    course_id: Annotated[str, typer.Option(help="Course identifier.")] = "seeded-course",
+    config: Annotated[
+        Path | None, typer.Option(help="Config JSON overriding defaults.")
+    ] = None,
+    no_cache: Annotated[
+        bool, typer.Option("--no-cache", help="Bypass the response cache.")
+    ] = False,
+) -> None:
+    """Generate a course with recorded provenance from a document directory.
+
+    Use this to point the drift detector at your own material: seed a course
+    from one snapshot, change the documents, then run `drift run` against the
+    pair.
+    """
+    cfg = Config.load(config)
+    try:
+        implementation = build_client(client, model, [])
+    except (ValueError, RuntimeError) as error:
+        typer.secho(str(error), fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=2) from error
+
+    cache = NullCache() if no_cache else FileCache(cfg.cache_dir)
+    report = seed_course(
+        docs,
+        implementation,
+        cfg,
+        cache,
+        course_id=course_id,
+        title=title,
+        max_items=max_items,
+    )
+
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(report.course.model_dump_json(indent=2) + "\n", encoding="utf-8")
+
+    typer.secho(
+        f"Wrote {report.accepted} of {report.attempted} questions to {out}",
+        fg=typer.colors.GREEN,
+        err=True,
+    )
+    for rejection in report.rejected:
+        typer.secho(f"  dropped {rejection}", fg=typer.colors.YELLOW, err=True)
+    if not report.accepted:
+        raise typer.Exit(code=1)
 
 
 def _print_deterministic(prepared: Prepared) -> None:

@@ -102,6 +102,8 @@ class FakeClient:
         task = prompts.read_task(prompt)
         if task == prompts.TASK_REMEDIATE:
             return self._remediate(prompt, mode)
+        if task == prompts.TASK_SEED:
+            return self._seed(prompt, mode)
         return self._adjudicate(prompt, mode)
 
     def _adjudicate(self, prompt: str, mode: str | None) -> str:
@@ -184,6 +186,34 @@ class FakeClient:
             0.85,
             "The wording changed without altering what the source states, so "
             "the question still has the same correct answer.",
+        )
+
+    def _seed(self, prompt: str, mode: str | None) -> str:
+        """Write a question whose correct option restates the source.
+
+        Crude, and deliberately so: the point of `drift seed` with the fake
+        client is to produce a course with real provenance so the rest of the
+        pipeline can be demonstrated on arbitrary documents, not to write
+        good questions. A real model does that job.
+        """
+        source = (prompts.read_block(prompt, prompts.SOURCE_NEW) or "").strip()
+        claim = _first_sentence(source) or source[:120]
+
+        if mode == "ungrounded":
+            claim = "A statement that appears in no document anywhere."
+
+        return json.dumps(
+            {
+                "stem": "According to the source material, which statement is correct?",
+                "options": [
+                    claim,
+                    "The requirement was withdrawn and no longer applies.",
+                    "This is decided locally with no written rule.",
+                    "None of the documented material covers this.",
+                ],
+                "correct_index": 0,
+                "grounded_in": claim,
+            }
         )
 
     def _remediate(self, prompt: str, mode: str | None) -> str:

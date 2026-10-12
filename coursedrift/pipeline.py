@@ -124,7 +124,11 @@ def build_client(name: str, model: str, failures: list[str] | None = None) -> LL
     if name == "fake":
         return FakeClient(failures=failures)
     if name == "ollama":
-        raise ValueError("the ollama client arrives in phase 8; use --client fake for now")
+        from coursedrift.llm.ollama import OllamaClient
+
+        ollama = OllamaClient(model=model)
+        ollama.preflight()
+        return ollama
     raise ValueError(f"unknown client {name!r}; expected 'fake', 'ollama' or 'none'")
 
 

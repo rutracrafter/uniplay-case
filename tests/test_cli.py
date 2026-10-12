@@ -69,10 +69,17 @@ def test_unknown_client_fails_with_a_readable_message() -> None:
     assert "unknown client" in result.output
 
 
-def test_ollama_is_not_available_yet_but_says_so() -> None:
-    result = runner.invoke(app, _args("--client", "ollama"))
+def test_ollama_preflight_failure_is_actionable() -> None:
+    """Whether the daemon is down or the model is absent, say what to run.
+
+    A model name that cannot exist keeps this deterministic on a machine that
+    does happen to have Ollama running.
+    """
+    result = runner.invoke(
+        app, _args("--client", "ollama", "--model", "definitely-not-a-real-model-xyz")
+    )
     assert result.exit_code == 2
-    assert "phase 8" in result.output
+    assert "ollama serve" in result.output or "ollama pull" in result.output
 
 
 def test_unknown_fake_failure_mode_is_rejected() -> None:
