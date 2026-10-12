@@ -18,7 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from rapidfuzz import fuzz
 
 from coursedrift.config import Config
-from coursedrift.diff import match_key
+from coursedrift.diff import ContentOp, MatchResult, match_key
 from coursedrift.models import Course, CourseItem, ProvenanceRef, Snapshot, Span
 from coursedrift.segment import normalize, span_hash
 
@@ -86,6 +86,42 @@ def _narrow(
     return candidates
 
 
+def _from_match(
+    ref: ProvenanceRef, matches: MatchResult, old_span: Span | None
+) -> ResolvedAnchor | None:
+    """Translate phase 2's verdict for this span into an anchor, if it has one.
+
+    Returns None — meaning "fall through to the hash lookup" — in two cases.
+
+    The matcher never saw the span, which happens for documents the manifest
+    called unchanged, since those are excluded from matching.
+
+    Or the pairing is IDENTICAL, where the matcher's choice is arbitrary and
+    must not be treated as knowledge. Inside a duplicate group it zips equal
+    hashes in document order because it has to produce *some* change table,
+    but "which of these two identical sentences was my source" genuinely has
+    no answer, and letting the matcher answer it would silence the ambiguity
+    escalation. The hash lookup below sees both candidates and says so.
+
+    What the matcher is trusted for is where it did real work: a similarity
+    pairing survived shingle blocking and a one-to-one constraint, and a
+    REMOVED verdict means nothing anywhere in the corpus matched.
+    """
+    change = matches.by_old_span().get(ref.span_id)
+    if change is None:
+        return None
+    if change.content is ContentOp.REMOVED or change.new is None:
+        return ResolvedAnchor(ref=ref, status=AnchorStatus.ORPHANED)
+    if change.content is ContentOp.IDENTICAL:
+        return None
+    return ResolvedAnchor(
+        ref=ref,
+        status=_status_for(change.new, ref, old_span),
+        new_span=change.new,
+        similarity=change.similarity,
+    )
+
+
 def _status_for(span: Span, ref: ProvenanceRef, old_span: Span | None) -> AnchorStatus:
     if span.doc_id != ref.doc_id:
         return AnchorStatus.MOVED
@@ -99,13 +135,32 @@ def resolve_anchor(
     new: Snapshot,
     cfg: Config,
     old_span: Span | None = None,
+    matches: MatchResult | None = None,
 ) -> ResolvedAnchor:
     """Locate one provenance ref in the new corpus.
 
     Corpus-wide at every step: content that moved into another document must
     still be found, which is what keeps a reorganization from orphaning a
     course.
+
+    When a `MatchResult` is supplied it is consulted first and its answer is
+    final for spans it covers. Phase 2 did the corpus-wide work with shingle
+    blocking and a one-to-one constraint, so it knows things a fresh
+    similarity lookup cannot reconstruct.
+
+    Letting the two disagree was a real defect, not a tidiness problem.
+    Expand a sentence substantially — "Notice must be given within 30 days."
+    into "Notice must typically be given within 30 days, though this may
+    vary by region." — and the matcher correctly pairs them as MODIFIED while
+    an independent fuzz.ratio lookup falls under the 0.85 floor and reports
+    ORPHANED. The item would then be routed RETIRE_SUGGESTED: the system
+    would propose deleting a question because its source material grew.
     """
+    if matches is not None:
+        decided = _from_match(ref, matches, old_span)
+        if decided is not None:
+            return decided
+
     # 1 — exact content hash.
     by_hash = new.by_hash()
     hits = list(by_hash.get(ref.snapshot_hash, ()))
@@ -278,8 +333,13 @@ def resolve_course(
     cfg: Config,
     *,
     infer: bool = True,
+    matches: MatchResult | None = None,
 ) -> AnchorReport:
-    """Resolve every item's provenance, inferring it where none was recorded."""
+    """Resolve every item's provenance, inferring it where none was recorded.
+
+    Pass `matches` so anchoring and the matcher cannot disagree about what
+    happened to a span. See `resolve_anchor` for why that matters.
+    """
     report = AnchorReport()
     for item in course.items:
         refs = list(item.provenance)
@@ -287,10 +347,10 @@ def resolve_course(
             refs = infer_provenance(item, old, cfg)
             if refs:
                 report.inferred_items.add(item.item_id)
-        resolved = [
-            resolve_anchor(ref, new, cfg, old_span=old.span_by_id(ref.span_id)) for ref in refs
+        report.anchors[item.item_id] = [
+            resolve_anchor(ref, new, cfg, old_span=old.span_by_id(ref.span_id), matches=matches)
+            for ref in refs
         ]
-        report.anchors[item.item_id] = resolved
     return report
 
 

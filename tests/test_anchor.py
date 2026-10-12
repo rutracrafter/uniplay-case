@@ -167,3 +167,81 @@ def test_resolve_course_can_be_told_not_to_infer(build: SnapshotBuilder) -> None
     report = resolve_course(course, old, new, Config(), infer=False)
     assert report.for_item("q3") == []
     assert report.inferred_items == set()
+
+
+# -- agreement with the matcher -------------------------------------------
+
+
+def test_substantial_expansion_resolves_via_the_match_result(build: SnapshotBuilder) -> None:
+    """The regression for anchoring and the matcher disagreeing.
+
+    An independent fuzz.ratio lookup falls under the floor when a sentence
+    grows this much, which would orphan the item and propose retiring a
+    question because its source material got longer.
+    """
+    from coursedrift.config import Config as Cfg
+    from coursedrift.corpus import diff_manifests
+    from coursedrift.diff import match_corpus
+
+    old = build("v1", {"p.md": "# P\n\nNotice must be given within 30 days.\n"})
+    new = build(
+        "v2",
+        {
+            "p.md": "# P\n\nNotice must typically be given within 30 days, though this "
+            "may vary by region.\n"
+        },
+    )
+    ref = _ref(old, "Notice must be given")
+
+    bare = resolve_anchor(ref, new, Cfg())
+    assert bare.status is AnchorStatus.ORPHANED, "the independent lookup gives up here"
+
+    matches = match_corpus(old, new, Cfg(), diff_manifests(old, new))
+    informed = resolve_anchor(ref, new, Cfg(), matches=matches)
+    assert informed.status is AnchorStatus.RESOLVED
+    assert informed.new_span is not None and "may vary by region" in informed.new_span.text
+
+
+def test_matcher_removal_verdict_orphans_the_anchor(build: SnapshotBuilder) -> None:
+    from coursedrift.config import Config as Cfg
+    from coursedrift.corpus import diff_manifests
+    from coursedrift.diff import match_corpus
+
+    old = build("v1", {"e.md": "# E\n\nSubmit receipts.\n\nThe daily rate is fixed.\n"})
+    new = build("v2", {"e.md": "# E\n\nSubmit receipts.\n"})
+    ref = _ref(old, "daily rate")
+    matches = match_corpus(old, new, Cfg(), diff_manifests(old, new))
+    assert resolve_anchor(ref, new, Cfg(), matches=matches).status is AnchorStatus.ORPHANED
+
+
+def test_identical_pairings_still_escalate_ambiguity(build: SnapshotBuilder) -> None:
+    """The matcher's choice inside a duplicate group is arbitrary, not knowledge."""
+    from coursedrift.config import Config as Cfg
+    from coursedrift.corpus import diff_manifests
+    from coursedrift.diff import match_corpus
+
+    shared = "All employees must comply."
+    old = build("v1", {"d.md": f"# Alpha\n\n{shared}\n"})
+    new = build("v2", {"d.md": f"# Alpha\n\n{shared}\n\nFiller sentence.\n\n{shared}\n"})
+    ref = _ref(old, shared)
+    matches = match_corpus(old, new, Cfg(), diff_manifests(old, new))
+    anchor = resolve_anchor(
+        ref, new, Cfg(), old_span=old.span_by_id(ref.span_id), matches=matches
+    )
+    assert anchor.status is AnchorStatus.AMBIGUOUS
+    assert len(anchor.candidates) == 2
+
+
+def test_spans_the_matcher_never_saw_fall_through(build: SnapshotBuilder) -> None:
+    """Unchanged documents are excluded from matching and resolve by hash."""
+    from coursedrift.config import Config as Cfg
+    from coursedrift.corpus import diff_manifests
+    from coursedrift.diff import match_corpus
+
+    body = "# S\n\nNothing changes here at all.\n"
+    old = build("v1", {"s.md": body, "p.md": "# P\n\nNotice is 30 days.\n"})
+    new = build("v2", {"s.md": body, "p.md": "# P\n\nNotice is 45 days.\n"})
+    ref = _ref(old, "Nothing changes")
+    matches = match_corpus(old, new, Cfg(), diff_manifests(old, new))
+    assert "s.md" not in {(c.new or c.old).doc_id for c in matches.changes}  # type: ignore[union-attr]
+    assert resolve_anchor(ref, new, Cfg(), matches=matches).status is AnchorStatus.RESOLVED

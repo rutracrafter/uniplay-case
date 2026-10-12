@@ -98,7 +98,7 @@ def _run(
     course = _course(old, needle)
     manifest = diff_manifests(old, new)
     matches = match_corpus(old, new, Config(), manifest)
-    anchors = resolve_course(course, old, new, Config())
+    anchors = resolve_course(course, old, new, Config(), matches=matches)
     return build_candidates(course, matches, anchors, Config())
 
 
@@ -241,7 +241,7 @@ def test_inferred_provenance_is_flagged_on_the_candidate(build: SnapshotBuilder)
     )
     course = Course(course_id="c", title="T", items=[bare])
     matches = match_corpus(old, new, Config(), diff_manifests(old, new))
-    anchors = resolve_course(course, old, new, Config())
+    anchors = resolve_course(course, old, new, Config(), matches=matches)
     candidates, _ = build_candidates(course, matches, anchors, Config())
     assert candidates[0].inferred_provenance is True
     assert "provenance was inferred, not recorded" in candidates[0].reasons
@@ -281,7 +281,7 @@ def test_skip_stats_account_for_every_item(build: SnapshotBuilder) -> None:
     ]
     course = Course(course_id="c", title="T", items=items)
     matches = match_corpus(old, new, Config(), diff_manifests(old, new))
-    anchors = resolve_course(course, old, new, Config())
+    anchors = resolve_course(course, old, new, Config(), matches=matches)
     candidates, stats = build_candidates(course, matches, anchors, Config())
 
     assert stats.total_items == len(items)
