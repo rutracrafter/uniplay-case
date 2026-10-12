@@ -55,6 +55,10 @@ class ImpactCandidate(BaseModel):
     def has_reparenting(self) -> bool:
         return any(c.position is PositionOp.REPARENTED for c in self.changes)
 
+    @property
+    def has_reordering(self) -> bool:
+        return any(c.reordered for c in self.changes)
+
 
 class SkipStats(BaseModel):
     """What the run did and did not spend a model call on.

@@ -79,6 +79,7 @@ CASES = [
     (7, "q10", Route.NEEDS_REVIEW, "sentence reparented into Deprecated Practices"),
     (8, "q07", Route.OK, "comma-only edit"),
     (10, "q12", Route.NEEDS_REVIEW, "no recorded provenance, inferred and capped"),
+    (11, "q14", Route.NEEDS_REVIEW, "same words rearranged into the opposite instruction"),
 ]
 
 
@@ -122,6 +123,43 @@ def test_case_7_shows_both_sections(report: RunReport) -> None:
         "Expenses",
         "Deprecated Practices",
     )
+
+
+def test_case_11_is_caught_despite_the_model_saying_otherwise(report: RunReport) -> None:
+    """The deterministic signal has to outrank the verdict here.
+
+    The fake client sees no changed figure and no new hedging, so it reports
+    UNAFFECTED — exactly what a real model may do when every word is still
+    present. The rearrangement flag is what sends this to a human.
+    """
+    finding = next(f for f in report.findings if f.item_id == "q14")
+    assert finding.verdict is not None and finding.verdict.value == "UNAFFECTED"
+    assert finding.route is Route.NEEDS_REVIEW
+    assert "same words in a different order" in finding.reasons[-1]
+
+    change = finding.changes[0]
+    assert change.reordered is True
+    assert change.similarity is not None and change.similarity < 0.90
+    assert change.pair_score == 1.0
+
+
+def test_case_11_prompt_warns_the_model_about_the_rearrangement(report: RunReport) -> None:
+    from coursedrift.adjudicate import gather
+    from coursedrift.anchor import resolve_course
+    from coursedrift.corpus import diff_manifests, load_course, load_snapshot
+    from coursedrift.diff import match_corpus
+    from coursedrift.impact import build_candidates
+
+    cfg = Config()
+    old = load_snapshot(FIXTURES / "docs_v1")
+    new = load_snapshot(FIXTURES / "docs_v2")
+    course = load_course(FIXTURES / "course.json")
+    matches = match_corpus(old, new, cfg, diff_manifests(old, new))
+    anchors = resolve_course(course, old, new, cfg, matches=matches)
+    candidates, _ = build_candidates(course, matches, anchors, cfg)
+
+    target = next(c for c in candidates if c.item.item_id == "q14")
+    assert "meaning has been reversed" in gather(target, new).diff
 
 
 def test_case_8_never_reached_the_model(report: RunReport) -> None:
@@ -194,7 +232,7 @@ def test_case_9_obeyed_injection_still_yields_a_valid_finding() -> None:
 
 def test_every_item_appears_exactly_once(report: RunReport) -> None:
     ids = [f.item_id for f in report.findings]
-    assert len(ids) == len(set(ids)) == report.stats.total_items == 13
+    assert len(ids) == len(set(ids)) == report.stats.total_items == 14
 
 
 def test_skip_statistics_account_for_every_item(report: RunReport) -> None:

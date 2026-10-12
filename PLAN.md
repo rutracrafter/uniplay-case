@@ -263,7 +263,9 @@ class SpanChange(BaseModel):
     position: PositionOp
     old: Span | None
     new: Span | None
-    similarity: float | None = None
+    similarity: float | None = None   # order-SENSITIVE; this is what is reported
+    pair_score: float | None = None   # order-insensitive; this is what paired them
+    reordered: bool = False           # exact token-multiset rearrangement
     inline_diff: str | None = None
     across_docs: bool = False
 ```
@@ -327,6 +329,9 @@ differ **after** resolving renames through the section map.
   assertion in the suite
 - a reworded sentence yields one `MODIFIED` pair, not `REMOVED` + `ADDED`
 - a comma-only edit yields `COSMETIC`, and a case-only edit yields `COSMETIC`
+- a meaning-reversing rearrangement reports an order-sensitive similarity well
+  below 1.00, is flagged `reordered`, and is never `COSMETIC` — while an
+  order-insensitive score is still what pairs a heavy reword
 - a whitespace-only edit never reaches Phase B at all (asserted by spying on the
   residue, so the free path stays free)
 - content moved from `a.md` into `b.md` matches with `across_docs=True` and
@@ -404,6 +409,8 @@ phase's tests so the constraint is pinned to the component it constrains:
 - span moved to a different section → `MOVED`
 - span lightly reworded → fuzzy `RESOLVED` with similarity recorded
 - span deleted → `ORPHANED`
+- a stale, positional `span_id` never borrows another span's fate: the recorded
+  content hash settles identity
 - snapshot text appearing twice in the new corpus, different sections → section
   tiebreak picks the right one
 - same, but both candidates in the same section path → `AMBIGUOUS`, both
@@ -685,14 +692,33 @@ No I/O, no client, no clock. Precedence, highest first:
 1. `cand.preset_route` is set → use it
 2. `adj` is `None` or failed → `NEEDS_REVIEW`, reason = the `FailureKind`
 3. `adj.verdict is UNCERTAIN` → `NEEDS_REVIEW`
-4. `adj.verdict is UNAFFECTED` → `OK`
-5. `adj.confidence < cfg.confidence_floor` → `NEEDS_REVIEW`
-6. `not adj.unanimous` → `NEEDS_REVIEW`
-7. any anchor `inferred` → `NEEDS_REVIEW`, patch attached as a suggestion
-8. any change `REPARENTED` → `NEEDS_REVIEW`, low severity
-9. `patch` is `None` or failed validation → `NEEDS_REVIEW`, rejected attempt
-   attached
-10. otherwise → `AUTO_FIX_PROPOSED`
+4. `adj.confidence < cfg.confidence_floor` → `NEEDS_REVIEW`
+5. `not adj.unanimous` → `NEEDS_REVIEW`
+6. any anchor `inferred` → `NEEDS_REVIEW`, patch attached as a suggestion
+7. any change `REPARENTED` → `NEEDS_REVIEW`, low severity
+8. any change `reordered` → `NEEDS_REVIEW`, low severity
+9. `adj.verdict is UNAFFECTED` → `OK`
+10. `patch` is `None` or failed validation → `NEEDS_REVIEW`, rejected attempt
+    attached
+11. otherwise → `AUTO_FIX_PROPOSED`
+
+Three of these sit higher than my first draft had them, and each move makes the
+system fail closed rather than open.
+
+The **confidence floor (4)** was below the `UNAFFECTED` check. A model reporting
+"unaffected, confidence 0.3" is telling us it does not know, and reading that as
+"fine" contradicts the whole posture.
+
+The **inferred-provenance cap (6)** was below it too. Reaching `OK` there means
+we guessed which span a question came from, that guessed span changed, and we
+reported nothing — a silent pass built on a guess. (An inferred item whose spans
+did *not* change never reaches triage; phase 4 presets it to `OK`.)
+
+The **rearrangement rule (8)** is new, and is the one case where asking a model
+"did this change?" actively invites the wrong answer: swap `always` and `never`
+and every word is still present, so `UNAFFECTED` is a perfectly reasonable thing
+for it to say about text that now means the opposite. The deterministic signal
+has to outrank the verdict.
 
 Every `Finding` carries `reasons: list[str]` naming which rule fired, so the
 report can explain itself.
@@ -709,6 +735,8 @@ report can explain itself.
   asserted, not described
 - a timeout on adjudication routes to `NEEDS_REVIEW` with `reason` containing
   `TIMEOUT`
+- a meaning-reversing rearrangement routes to `NEEDS_REVIEW` even when the model
+  reports `UNAFFECTED` at high confidence
 - `votes=3` with one dissenting scripted response routes to `NEEDS_REVIEW`
 - an inferred-provenance item with a perfect high-confidence patch still routes
   to `NEEDS_REVIEW`
@@ -734,18 +762,29 @@ tests/test_demo_golden.py
 
 ### Fixture corpus
 
-Four documents, chosen so one reorganization exercises several cases at once:
+Documents chosen so one reorganization exercises several cases at once:
 
 | file | v1 → v2 | cases |
 |---|---|---|
-| `leave-policy.md` | notice period 30 → 45 days; one paragraph reworded; one hedged rewrite | 01, 02, 05 |
-| `security-handbook.md` | sections shuffled, no text edits; one comma added | 06, 08 |
+| `leave-policy.md` | notice period 30 → 45 days; one paragraph reworded; one hedged rewrite; an injection payload added | 01, 02, 05, 09 |
+| `security-handbook.md` | sections shuffled, no text edits; one comma added; one sentence rearranged into its opposite | 06, 08, 11 |
 | `expenses.md` | "Per-diem" section deleted; one sentence reparented into "Deprecated Practices" | 03, 07 |
 | `onboarding.md` | **deleted in v2**, two paragraphs folded into `leave-policy.md` | 04 |
-| `vendor-notes.md` | added in v2, contains an injection payload | 09 |
+| `benefits.md` | byte-identical in both snapshots | the `untouched` accounting bucket |
+| `vendor-notes.md` | added in v2 | added-document handling |
 
-`course.json` holds twelve items across three levels, eleven with recorded
+`course.json` holds fourteen items across three levels, thirteen with recorded
 provenance and one with none at all (case 10).
+
+The injection payload lives in `leave-policy.md`, not in the added
+`vendor-notes.md` as first planned: nothing anchors to an added document, so the
+payload would never reach a prompt and the case would prove nothing. It now sits
+in the same section as the figure that changed, so it lands in that item's
+`CONTEXT` block — and a test asserts it gets there.
+
+**Keep the fixture directories clean.** The demo loads every `*.md` beneath
+them, so a stray document changes the report and breaks the golden comparison.
+Scratch files belong outside `fixtures/`.
 
 ### Report
 

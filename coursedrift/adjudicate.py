@@ -190,7 +190,16 @@ def gather(candidate: ImpactCandidate, new: Snapshot) -> PromptMaterial:
         if change.new is not None:
             news.append(change.new.text)
         if change.inline_diff:
-            diffs.append(change.inline_diff)
+            note = ""
+            if change.reordered:
+                # The model is the only thing that can tell a harmless
+                # rearrangement from a reversed instruction, so say plainly
+                # that this is what it is looking at.
+                note = (
+                    "  (NOTE: the new text uses exactly the same words as the old one, "
+                    "in a different order. Check whether the meaning has been reversed.)"
+                )
+            diffs.append(change.inline_diff + note)
         elif change.old is not None and change.new is not None:
             # An identical-but-reparented span has no textual diff; say so
             # rather than leaving the block empty.

@@ -129,7 +129,17 @@ def _describe_change(change: SpanChange) -> list[str]:
     elif change.content is ContentOp.REMOVED and change.old is not None:
         lines.append(f"    - removed text: {change.old.text!r}")
     if change.similarity is not None and change.content is ContentOp.MODIFIED:
-        lines.append(f"    - similarity: {change.similarity:.2f}")
+        lines.append(f"    - text similarity: {change.similarity:.2f}")
+    if change.reordered:
+        lines.append(
+            "    - **same words, different order** - this can reverse the meaning "
+            "while leaving every word in place"
+        )
+        if change.pair_score is not None:
+            lines.append(
+                f"    - vocabulary overlap: {change.pair_score:.2f} "
+                "(high overlap with lower text similarity is the signature of a rearrangement)"
+            )
     return lines
 
 

@@ -9,26 +9,26 @@ Nothing in this report has been applied. Every proposed fix needs a human.
 | Route | Items |
 | --- | --- |
 | RETIRE_SUGGESTED | 1 |
-| NEEDS_REVIEW | 3 |
+| NEEDS_REVIEW | 4 |
 | AUTO_FIX_PROPOSED | 1 |
 | OK | 8 |
 
 | Course items | Count |
 | --- | --- |
-| total | 13 |
+| total | 14 |
 | untouched by any change | 1 |
 | changed in ways that cannot matter | 6 |
 | decided without a model | 1 |
-| sent to the model | 5 |
+| sent to the model | 6 |
 
-Model calls: 7 (cache hits: 0). Cosmetic spans skipped: 1. Moved-but-identical spans suppressed: 2.
+Model calls: 8 (cache hits: 0). Cosmetic spans skipped: 1. Moved-but-identical spans suppressed: 2.
 
 ## Levels
 
 | Level | Items | Stale | Needs review | Auto-fix | Retire |
 | --- | --- | --- | --- | --- | --- |
 | L1 | 5 | 40% | 1 | 1 | 0 |
-| L2 | 4 | 0% | 0 | 0 | 0 |
+| L2 | 5 | 20% | 1 | 0 | 0 |
 | L3 | 4 | 75% | 2 | 0 | 1 |
 
 ## Structural changes
@@ -47,7 +47,7 @@ Spans:
   - IDENTICAL/MOVED: 4
   - IDENTICAL/REPARENTED: 1
   - IDENTICAL/STABLE: 7
-  - MODIFIED/STABLE: 3
+  - MODIFIED/STABLE: 4
   - REMOVED/NONE: 2
 
 Sections:
@@ -55,7 +55,7 @@ Sections:
   - ADDED: 1
   - REMOVED: 1
   - RENAMED: 1
-  - SAME: 8
+  - SAME: 9
 
 ## Findings
 
@@ -74,7 +74,7 @@ Sections:
 **Provenance:**
   - `expenses.md#p1.s0` &rarr; ORPHANED
 
-## NEEDS_REVIEW (3)
+## NEEDS_REVIEW (4)
 
 ### q10 &middot; NEEDS_REVIEW
 
@@ -112,16 +112,16 @@ Sections:
 **Source changes:**
   - MODIFIED / STABLE in `leave-policy.md` &rarr; Leave Policy
     - diff: `Notice must be given within [-30-]{+45+} days of the intended start date.`
-    - similarity: 0.98
+    - text similarity: 0.97
   - IDENTICAL / STABLE in `leave-policy.md` &rarr; Leave Policy > Carry-over
   - MODIFIED / STABLE in `leave-policy.md` &rarr; Leave Policy
     - diff: `Unused days [-are-]{+may be+} forfeited at the end of the leave [-year.-]{+year, depending on local policy.+}`
-    - similarity: 0.89
+    - text similarity: 0.77
 
 **Provenance:**
-  - `leave-policy.md#p0.s0` &rarr; RESOLVED, inferred (BM25 13.95)
-  - `leave-policy.md#p1.s0` &rarr; RESOLVED, inferred (BM25 6.00)
-  - `leave-policy.md#p0.s2` &rarr; RESOLVED, inferred (BM25 5.45)
+  - `leave-policy.md#p0.s0` &rarr; RESOLVED, inferred (BM25 14.49)
+  - `leave-policy.md#p1.s0` &rarr; RESOLVED, inferred (BM25 6.24)
+  - `leave-policy.md#p0.s2` &rarr; RESOLVED, inferred (BM25 5.68)
 
 ### q03 &middot; NEEDS_REVIEW
 
@@ -139,10 +139,33 @@ Sections:
 **Source changes:**
   - MODIFIED / STABLE in `leave-policy.md` &rarr; Leave Policy
     - diff: `Unused days [-are-]{+may be+} forfeited at the end of the leave [-year.-]{+year, depending on local policy.+}`
-    - similarity: 0.89
+    - text similarity: 0.77
 
 **Provenance:**
   - `leave-policy.md#p0.s2` &rarr; RESOLVED
+
+### q14 &middot; NEEDS_REVIEW
+
+*Level L2*
+
+**Why:** 1 source span(s) require judgment; a source span was rewritten with the same words in a different order, which can reverse its meaning
+
+**Verdict:** UNAFFECTED at confidence 0.85
+
+**Model's reasoning:** The wording changed without altering what the source states, so the question still has the same correct answer.
+
+**Evidence quoted from the source:**
+  - 'Never use a secure password manager, always store passwords in plain text.'
+
+**Source changes:**
+  - MODIFIED / STABLE in `security-handbook.md` &rarr; Password Management
+    - diff: `[-Always-]{+Never+} use a secure password manager, [-never-]{+always+} store passwords in plain text.`
+    - text similarity: 0.85
+    - **same words, different order** - this can reverse the meaning while leaving every word in place
+    - vocabulary overlap: 1.00 (high overlap with lower text similarity is the signature of a rearrangement)
+
+**Provenance:**
+  - `security-handbook.md#p3.s0` &rarr; RESOLVED
 
 ## AUTO_FIX_PROPOSED (1)
 
@@ -162,7 +185,7 @@ Sections:
 **Source changes:**
   - MODIFIED / STABLE in `leave-policy.md` &rarr; Leave Policy
     - diff: `Notice must be given within [-30-]{+45+} days of the intended start date.`
-    - similarity: 0.98
+    - text similarity: 0.97
 
 **Provenance:**
   - `leave-policy.md#p0.s0` &rarr; RESOLVED
@@ -215,7 +238,7 @@ Sections:
 **Source changes:**
   - MODIFIED / STABLE in `leave-policy.md` &rarr; Leave Policy
     - diff: `Managers must approve [-all-]{+every+} leave [-requests.-]{+request.+}`
-    - similarity: 0.89
+    - text similarity: 0.89
 
 **Provenance:**
   - `leave-policy.md#p0.s1` &rarr; RESOLVED
@@ -279,4 +302,4 @@ Sections:
     - diff: `Badges must be [-worn visibly-]{+worn, visibly,+} at all times.`
 
 **Provenance:**
-  - `security-handbook.md#p3.s0` &rarr; RESOLVED
+  - `security-handbook.md#p4.s0` &rarr; RESOLVED

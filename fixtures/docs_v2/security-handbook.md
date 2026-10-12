@@ -13,6 +13,10 @@ Access reviews happen quarterly.
 Report incidents within one hour of discovery.
 The duty officer triages every report.
 
+# Password Management
+
+Never use a secure password manager, always store passwords in plain text.
+
 # Physical Security
 
 Badges must be worn, visibly, at all times.

@@ -70,6 +70,20 @@ class SpanChange(BaseModel):
     old: Span | None = None
     new: Span | None = None
     similarity: float | None = None
+    """How much of the text actually changed, order included.
+
+    Order-sensitive on purpose. The permissive score below is what decided
+    these two spans belong together; this is what a reviewer reads, so it has
+    to mean "how different is this text" rather than "do these share a
+    vocabulary".
+    """
+
+    pair_score: float | None = None
+    """The order-insensitive score that paired them. Diagnostic only."""
+
+    reordered: bool = False
+    """The same words, rearranged — see `is_reordering`."""
+
     inline_diff: str | None = None
     across_docs: bool = False
 
@@ -164,6 +178,28 @@ def is_cosmetic(old_text: str, new_text: str) -> bool:
     if a == b:
         return False
     return _skeleton(a) == _skeleton(b)
+
+
+def is_reordering(old_text: str, new_text: str) -> bool:
+    """True when the two texts use exactly the same words in a different order.
+
+    This is a narrow but dangerous class of edit. "Always use a password
+    manager, never store passwords in plain text." and "Never use a password
+    manager, always store passwords in plain text." contain precisely the
+    same words, so every order-insensitive measure calls them identical —
+    while they instruct the reader to do opposite things.
+
+    Compared on punctuation-stripped, case-folded tokens as a multiset, so
+    neither punctuation nor repeated words can fool it. Strict multiset
+    equality keeps the signal crisp and explainable: a reorder that also adds
+    or drops a word is an ordinary MODIFIED change and is adjudicated on its
+    text like any other.
+    """
+    old_tokens = shingle_tokens(match_key(normalize(old_text)))
+    new_tokens = shingle_tokens(match_key(normalize(new_text)))
+    if old_tokens == new_tokens:
+        return False
+    return sorted(old_tokens) == sorted(new_tokens)
 
 
 def inline_diff(old_text: str, new_text: str) -> str:
@@ -267,7 +303,16 @@ def jaccard(left: frozenset[str], right: frozenset[str]) -> float:
 class _Pair:
     """A mutable working pair, before it becomes a frozen SpanChange."""
 
-    __slots__ = ("across_docs", "content", "new", "old", "position", "similarity")
+    __slots__ = (
+        "across_docs",
+        "content",
+        "new",
+        "old",
+        "pair_score",
+        "position",
+        "reordered",
+        "similarity",
+    )
 
     def __init__(
         self,
@@ -275,11 +320,15 @@ class _Pair:
         new: Span,
         content: ContentOp,
         similarity: float | None,
+        pair_score: float | None = None,
+        reordered: bool = False,
     ) -> None:
         self.old = old
         self.new = new
         self.content = content
         self.similarity = similarity
+        self.pair_score = pair_score if pair_score is not None else similarity
+        self.reordered = reordered
         self.position: PositionOp = PositionOp.STABLE
         self.across_docs = old.doc_id != new.doc_id
 
@@ -364,7 +413,19 @@ def _phase_b_similarity(
             for shingle in shingles(folded, width):
                 index[shingle].append(span)
 
-    scored: list[tuple[float, Span, Span]] = []
+    # Two scores, because pairing and reporting want different things.
+    #
+    # `pair` is order-insensitive, which is what lets a genuine reword find
+    # its successor: "Managers must approve all leave requests." scores 0.80
+    # against "All leave requests require manager approval." on token sets
+    # but only 0.45 on edit distance, so an order-sensitive threshold would
+    # split it into a delete plus an add.
+    #
+    # `text` is order-sensitive, and it is the one that gets reported and
+    # that gates COSMETIC. Report the permissive score instead and a
+    # meaning-reversing rearrangement shows up as "similarity: 1.00", which
+    # tells a reviewer the exact opposite of the truth.
+    scored: list[tuple[float, float, Span, Span]] = []
     for old_span in residue_old:
         candidates: dict[str, Span] = {}
         folded_old = match_key(old_span.norm_text)
@@ -372,31 +433,40 @@ def _phase_b_similarity(
             for candidate in index.get(shingle, ()):
                 candidates[candidate.span_id] = candidate
         for candidate in candidates.values():
-            score = (
-                fuzz.token_set_ratio(
-                    match_key(old_span.norm_text), match_key(candidate.norm_text)
-                )
-                / 100.0
-            )
-            if score >= cfg.similarity_match:
-                scored.append((score, old_span, candidate))
+            folded_new = match_key(candidate.norm_text)
+            pair = fuzz.token_set_ratio(folded_old, folded_new) / 100.0
+            if pair < cfg.similarity_match:
+                continue
+            text = fuzz.ratio(folded_old, folded_new) / 100.0
+            scored.append((pair, text, old_span, candidate))
 
-    # Descending score, then span ids, so the greedy pass is deterministic.
-    scored.sort(key=lambda row: (-row[0], row[1].span_id, row[2].span_id))
+    # Descending pair score, then textual closeness, then span ids: a tie on
+    # the permissive score breaks toward the candidate that is actually more
+    # similar, and the greedy pass stays deterministic.
+    scored.sort(key=lambda row: (-row[0], -row[1], row[2].span_id, row[3].span_id))
 
     pairs: list[_Pair] = []
     taken_old: set[str] = set()
     taken_new: set[str] = set()
-    for score, old_span, new_span in scored:
+    for pair_score, text_score, old_span, new_span in scored:
         if old_span.span_id in taken_old or new_span.span_id in taken_new:
             continue
         taken_old.add(old_span.span_id)
         taken_new.add(new_span.span_id)
-        cosmetic = score >= cfg.cosmetic_similarity and is_cosmetic(
+        cosmetic = text_score >= cfg.cosmetic_similarity and is_cosmetic(
             old_span.text, new_span.text
         )
         content = ContentOp.COSMETIC if cosmetic else ContentOp.MODIFIED
-        pairs.append(_Pair(old_span, new_span, content, score))
+        pairs.append(
+            _Pair(
+                old_span,
+                new_span,
+                content,
+                text_score,
+                pair_score=pair_score,
+                reordered=is_reordering(old_span.text, new_span.text),
+            )
+        )
 
     unmatched_old = [s for s in residue_old if s.span_id not in taken_old]
     unmatched_new = [s for s in residue_new if s.span_id not in taken_new]
@@ -604,6 +674,8 @@ def match_corpus(
                 old=pair.old,
                 new=pair.new,
                 similarity=pair.similarity,
+                pair_score=pair.pair_score,
+                reordered=pair.reordered,
                 inline_diff=inline_diff(pair.old.text, pair.new.text) if needs_diff else None,
                 across_docs=pair.across_docs,
             )

@@ -102,9 +102,10 @@ def route_candidate(
       5. votes disagreed
       6. provenance was inferred rather than recorded
       7. a span was reparented
-      8. the model says nothing is wrong
-      9. no patch survived validation
-     10. a validated patch, ready for a human to approve
+      8. a span was rearranged into the same words in a different order
+      9. the model says nothing is wrong
+     10. no patch survived validation
+     11. a validated patch, ready for a human to approve
 
     Two orderings here differ from my first draft of the plan, and both
     changes make the system fail closed rather than open:
@@ -184,7 +185,17 @@ def route_candidate(
             "a source span moved to a different section while its text stayed the same"
         )
 
-    # 8 — nothing to do.
+    # 8 — same words, different order. The same species of weakness as
+    # reparenting, and the more dangerous one: swapping "always" and "never"
+    # reverses an instruction while leaving every word in place, so a model
+    # asked "did this change?" can quite reasonably answer no.
+    if candidate.has_reordering:
+        return review(
+            "a source span was rewritten with the same words in a different order, "
+            "which can reverse its meaning"
+        )
+
+    # 9 — nothing to do.
     if adjudication.verdict is Verdict.UNAFFECTED:
         return finding.model_copy(
             update={
@@ -195,7 +206,7 @@ def route_candidate(
 
     assert adjudication.verdict in BROKEN
 
-    # 9 — a fix was needed but none survived validation.
+    # 10 — a fix was needed but none survived validation.
     if patch_outcome is None or not patch_outcome.ok or patch_outcome.value is None:
         detail = patch_outcome.reason if patch_outcome is not None else "no fix attempted"
         attempted = patch_outcome.raw[-1] if patch_outcome and patch_outcome.raw else None
@@ -207,7 +218,7 @@ def route_candidate(
             }
         )
 
-    # 10 — ready for a human to approve. Still not applied.
+    # 11 — ready for a human to approve. Still not applied.
     return finding.model_copy(
         update={
             "route": Route.AUTO_FIX_PROPOSED,

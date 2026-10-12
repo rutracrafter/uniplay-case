@@ -148,7 +148,7 @@
       "provenance": [
         {
           "doc_id": "security-handbook.md",
-          "span_id": "security-handbook.md#p3.s0",
+          "span_id": "security-handbook.md#p4.s0",
           "snapshot_text": "Badges must be worn visibly at all times.",
           "snapshot_hash": "ba55f63073a21e89",
           "inferred": false,
@@ -173,6 +173,28 @@
           "span_id": "security-handbook.md#p0.s0",
           "snapshot_text": "All accounts require multi-factor authentication.",
           "snapshot_hash": "11aa428bb3c66544",
+          "inferred": false,
+          "infer_score": null
+        }
+      ]
+    },
+    {
+      "item_id": "q14",
+      "level_id": "L2",
+      "stem": "How should passwords be stored?",
+      "options": [
+        "In a secure password manager",
+        "In plain text",
+        "In a shared spreadsheet",
+        "Written on a whiteboard"
+      ],
+      "correct_index": 0,
+      "provenance": [
+        {
+          "doc_id": "security-handbook.md",
+          "span_id": "security-handbook.md#p3.s0",
+          "snapshot_text": "Always use a secure password manager, never store passwords in plain text.",
+          "snapshot_hash": "5f9538611b8cc9c2",
           "inferred": false,
           "infer_score": null
         }

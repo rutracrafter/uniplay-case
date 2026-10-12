@@ -245,3 +245,38 @@ def test_spans_the_matcher_never_saw_fall_through(build: SnapshotBuilder) -> Non
     matches = match_corpus(old, new, Cfg(), diff_manifests(old, new))
     assert "s.md" not in {(c.new or c.old).doc_id for c in matches.changes}  # type: ignore[union-attr]
     assert resolve_anchor(ref, new, Cfg(), matches=matches).status is AnchorStatus.RESOLVED
+
+
+def test_a_stale_span_id_does_not_borrow_another_spans_fate(build: SnapshotBuilder) -> None:
+    """span_id is positional, so it cannot be the basis of identity.
+
+    Insert a paragraph into the old snapshot and every later span_id shifts.
+    A ref recorded before that edit then names a span holding different
+    content, and keying the change table on the id alone would judge a
+    question against material it never came from. The recorded hash is what
+    settles it.
+    """
+    from coursedrift.config import Config as Cfg
+    from coursedrift.corpus import diff_manifests
+    from coursedrift.diff import match_corpus
+
+    before = build("v1", {"d.md": "# D\n\nNotice is 30 days.\n\nBadges must be worn.\n"})
+    ref = _ref(before, "Badges must be worn")
+    assert ref.span_id == "d.md#p1.s0"
+
+    # A paragraph appears above it, so p1 now holds something else entirely.
+    after_edit = build(
+        "v1b", {"d.md": "# D\n\nNotice is 30 days.\n\nInserted line.\n\nBadges must be worn.\n"}
+    )
+    new = build(
+        "v2", {"d.md": "# D\n\nNotice is 30 days.\n\nInserted line.\n\nBadges must be worn.\n"}
+    )
+    shifted = next(s for s in after_edit.all_spans() if "Badges" in s.text)
+    assert shifted.span_id == "d.md#p2.s0", "the id really did move"
+
+    matches = match_corpus(after_edit, new, Cfg(), diff_manifests(after_edit, new))
+    anchor = resolve_anchor(ref, new, Cfg(), matches=matches)
+
+    assert anchor.located
+    assert anchor.new_span is not None
+    assert "Badges" in anchor.new_span.text, "must resolve by content, not by stale id"

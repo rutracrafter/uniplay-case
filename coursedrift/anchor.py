@@ -110,6 +110,19 @@ def _from_match(
     change = matches.by_old_span().get(ref.span_id)
     if change is None:
         return None
+
+    # The change table is keyed by span_id, and a span_id is positional
+    # ("#p3.s0"). Verify that the span it names still holds the content this
+    # ref was taken from before believing anything the table says about it.
+    #
+    # Skipping this check is a silent-wrong-answer bug, not a tidiness one:
+    # if a paragraph is inserted into the old snapshot, or ids are
+    # regenerated, every later ref shifts by one and the lookup returns a
+    # *different* span's fate — a question gets judged against material it
+    # never came from. Identity is the hash; fall through to it.
+    if change.old is None or change.old.hash != ref.snapshot_hash:
+        return None
+
     if change.content is ContentOp.REMOVED or change.new is None:
         return ResolvedAnchor(ref=ref, status=AnchorStatus.ORPHANED)
     if change.content is ContentOp.IDENTICAL:

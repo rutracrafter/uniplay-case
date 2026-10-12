@@ -13,6 +13,10 @@ The duty officer triages every report.
 Audit logs are kept for ninety days.
 Backups are encrypted at rest.
 
+# Password Management
+
+Always use a secure password manager, never store passwords in plain text.
+
 # Physical Security
 
 Badges must be worn visibly at all times.

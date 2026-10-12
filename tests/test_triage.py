@@ -249,3 +249,64 @@ def test_findings_carry_the_evidence_for_review() -> None:
     assert finding.doc_ids == ["d.md"]
     assert finding.changes
     assert finding.anchors
+
+
+# -- rule 8: the same words in a different order ---------------------------
+
+
+def _reordered_candidate(inferred: bool = False) -> ImpactCandidate:
+    change = SpanChange(
+        content=ContentOp.MODIFIED,
+        position=PositionOp.STABLE,
+        old=_span(),
+        new=_span(),
+        similarity=0.85,
+        pair_score=1.0,
+        reordered=True,
+        inline_diff=(
+            "[-Always-]{+Never+} use a manager, [-never-]{+always+} store in plain text."
+        ),
+    )
+    ref = ProvenanceRef(
+        doc_id="d.md",
+        span_id="d.md#p0.s0",
+        snapshot_text="Notice is 30 days.",
+        snapshot_hash="abcd1234abcd1234",
+        inferred=inferred,
+    )
+    return ImpactCandidate(
+        item=CourseItem(
+            item_id="q1", level_id="L1", stem="How?", options=["a", "b"], correct_index=0
+        ),
+        anchors=[ResolvedAnchor(ref=ref, status=AnchorStatus.RESOLVED, new_span=_span())],
+        changes=[change],
+        needs_model=True,
+    )
+
+
+def test_rule_8_rearrangement_is_review() -> None:
+    finding = route_candidate(_reordered_candidate(), _adj(Verdict.WEAKENED), _patch(), CFG)
+    assert finding.route is Route.NEEDS_REVIEW
+    assert "same words in a different order" in finding.reasons[-1]
+
+
+def test_rule_8_overrides_a_confident_unaffected() -> None:
+    """The case that motivated the rule.
+
+    Swapping "always" and "never" reverses an instruction while leaving every
+    word in place, so a model asked "did this change?" can quite reasonably
+    answer no. The deterministic signal has to win.
+    """
+    finding = route_candidate(_reordered_candidate(), _adj(Verdict.UNAFFECTED, 0.95), None, CFG)
+    assert finding.route is Route.NEEDS_REVIEW
+    assert "reverse its meaning" in finding.reasons[-1]
+
+
+def test_rule_8_does_not_fire_without_the_flag() -> None:
+    finding = route_candidate(_candidate(), _adj(Verdict.UNAFFECTED), None, CFG)
+    assert finding.route is Route.OK
+
+
+def test_candidate_exposes_the_reordering_signal() -> None:
+    assert _reordered_candidate().has_reordering is True
+    assert _candidate().has_reordering is False

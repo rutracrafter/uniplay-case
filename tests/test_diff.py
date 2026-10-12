@@ -203,3 +203,94 @@ def test_short_sentence_edit_is_modified_not_delete_plus_add(
     new = build("v2", {"p.md": "# P\n\nNotice is 45 days.\n"})
     result = match_corpus(old, new, Config())
     assert [c.content for c in result.changes] == [ContentOp.MODIFIED]
+
+
+# -- order-sensitive similarity -------------------------------------------
+
+INVERTED_OLD = "Always use a secure password manager, never store passwords in plain text."
+INVERTED_NEW = "Never use a secure password manager, always store passwords in plain text."
+
+
+def test_is_reordering_detects_the_same_words_rearranged() -> None:
+    from coursedrift.diff import is_reordering
+
+    assert is_reordering(INVERTED_OLD, INVERTED_NEW)
+    assert is_reordering("Before leaving, submit the form.", "Submit the form before leaving.")
+
+
+def test_is_reordering_ignores_punctuation_and_casing() -> None:
+    from coursedrift.diff import is_reordering
+
+    assert is_reordering("Always X, never Y.", "never y; ALWAYS x")
+
+
+def test_is_reordering_is_false_for_identical_text() -> None:
+    from coursedrift.diff import is_reordering
+
+    assert not is_reordering("Same words here.", "Same words here.")
+    assert not is_reordering("Same words here.", "same  words, here")
+
+
+def test_is_reordering_is_false_when_any_word_changes() -> None:
+    from coursedrift.diff import is_reordering
+
+    assert not is_reordering("Notice is 30 days.", "Notice is 45 days.")
+    assert not is_reordering("Always use X, never Y.", "Never use X, always Y, and also Z.")
+
+
+def test_meaning_reversing_rearrangement_is_not_reported_as_identical(
+    build: SnapshotBuilder,
+) -> None:
+    """The regression: token-set scoring called this 1.00.
+
+    Both sentences contain exactly the same words, so every order-insensitive
+    measure sees no difference at all — while they instruct the reader to do
+    opposite things. A reviewer reading "similarity: 1.00" would conclude
+    nothing had really changed.
+    """
+    old = build("v1", {"s.md": f"# Passwords\n\n{INVERTED_OLD}\n"})
+    new = build("v2", {"s.md": f"# Passwords\n\n{INVERTED_NEW}\n"})
+    result = match_corpus(old, new, Config())
+
+    assert len(result.changes) == 1
+    change = result.changes[0]
+    assert change.content is ContentOp.MODIFIED
+    assert change.similarity is not None and change.similarity < 0.90
+    assert change.reordered is True
+    assert change.pair_score == 1.0, "the permissive score is what paired them"
+
+
+def test_the_two_scores_are_kept_apart(build: SnapshotBuilder) -> None:
+    """Pairing needs order-insensitivity; reporting must not have it."""
+    old = build("v1", {"s.md": f"# P\n\n{INVERTED_OLD}\n"})
+    new = build("v2", {"s.md": f"# P\n\n{INVERTED_NEW}\n"})
+    change = match_corpus(old, new, Config()).changes[0]
+    assert change.pair_score is not None and change.similarity is not None
+    assert change.pair_score > change.similarity
+
+
+def test_a_rearrangement_can_never_be_cosmetic(build: SnapshotBuilder) -> None:
+    old = build("v1", {"s.md": f"# P\n\n{INVERTED_OLD}\n"})
+    new = build("v2", {"s.md": f"# P\n\n{INVERTED_NEW}\n"})
+    assert match_corpus(old, new, Config()).changes[0].content is not ContentOp.COSMETIC
+
+
+def test_order_insensitive_pairing_is_still_what_pairs_a_reword(
+    build: SnapshotBuilder,
+) -> None:
+    """A heavy reword scores 0.45 on edit distance and would otherwise split."""
+    old = build("v1", {"p.md": "# P\n\nManagers must approve all leave requests.\n"})
+    new = build("v2", {"p.md": "# P\n\nAll leave requests require manager approval.\n"})
+    result = match_corpus(old, new, Config())
+    assert [c.content for c in result.changes] == [ContentOp.MODIFIED]
+    change = result.changes[0]
+    assert change.similarity is not None and change.similarity < Config().similarity_match
+    assert change.pair_score is not None and change.pair_score >= Config().similarity_match
+
+
+def test_cosmetic_still_fires_on_the_order_sensitive_score(build: SnapshotBuilder) -> None:
+    old = build("v1", {"p.md": "# P\n\nBadges must be worn visibly at all times.\n"})
+    new = build("v2", {"p.md": "# P\n\nBadges must be worn, visibly, at all times.\n"})
+    change = match_corpus(old, new, Config()).changes[0]
+    assert change.content is ContentOp.COSMETIC
+    assert change.reordered is False

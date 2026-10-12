@@ -55,7 +55,7 @@ def test_run_writes_both_report_formats(tmp_path: Path) -> None:
     assert "Drift report" in markdown
     assert payload["course_id"] == "handbook-2026"
     assert payload["generated_at"] is not None
-    assert len(payload["findings"]) == 13
+    assert len(payload["findings"]) == 14
 
 
 def test_fail_on_drift_is_opt_in() -> None:
