@@ -93,12 +93,32 @@ unmatched.
 
 **Phase B — similarity alignment of the residue.** Only spans still unmatched are
 scored. A word-shingle inverted index blocks the candidate set — score only pairs
-sharing at least one 3-gram — keeping this near-linear rather than quadratic.
+sharing at least one n-gram — keeping this near-linear rather than quadratic.
 One-to-one greedy matching by descending similarity, threshold `>= 0.60`, yields
 `MODIFIED`. Leftovers are genuinely `REMOVED` and `ADDED`, trustworthy because
 Phase A already rescued every move. A deterministic shortcut catches the trivia:
 similarity `>= 0.95` where the inline diff is punctuation, whitespace or casing
 only is classified `COSMETIC` with no model call.
+
+**Two scores come out of Phase B, and conflating them is a trap.** The
+*pairing* score is order-insensitive, which is what lets a genuine reword find
+its successor: *"Managers must approve all leave requests."* scores 0.80 against
+*"All leave requests require manager approval."* on token sets but only 0.45 on
+edit distance, so an order-sensitive threshold would split it into a delete plus
+an add. The *reported* score has to be order-**sensitive**, because
+*"Always use a password manager, never store passwords in plain text."* and
+*"Never use a password manager, always store passwords in plain text."* contain
+exactly the same words — every order-insensitive measure calls them identical,
+while they instruct the reader to do opposite things. Report the permissive
+score and that reversal shows up as `similarity: 1.00`, telling a reviewer the
+precise opposite of the truth.
+
+A span whose words are an exact rearrangement of the old ones is additionally
+flagged `reordered`. It is a narrow class — strict token-multiset equality — but
+the most dangerous one available, since it can reverse an instruction while
+leaving every word in place. Triage treats it as a review trigger in its own
+right, because this is the one kind of edit where asking a model "did this
+change?" invites the answer "no".
 
 **Phase C — move classification by LIS.** For matched pairs `(old_idx, new_idx)`,
 sort by `old_idx` and take the longest increasing subsequence of `new_idx`. Pairs
@@ -227,7 +247,7 @@ passed.
 |---|---|
 | `OK` | No affected spans, or verdict `UNAFFECTED`, or a change classified `COSMETIC` or identical-and-stable. |
 | `AUTO_FIX_PROPOSED` | Verdict `WEAKENED` or `INVALIDATED`, confidence `>= 0.75`, every patch validator passed, provenance recorded rather than inferred, and — when `--votes > 1` — unanimous. |
-| `NEEDS_REVIEW` | Verdict `UNCERTAIN` · confidence below floor · any validator rejection · vote disagreement · ambiguous anchor · inferred provenance · reparented span · timeout or retries exhausted. |
+| `NEEDS_REVIEW` | Verdict `UNCERTAIN` · confidence below floor · any validator rejection · vote disagreement · ambiguous anchor · inferred provenance · reparented span · rearranged span (same words, different order) · timeout or retries exhausted. |
 | `RETIRE_SUGGESTED` | All provenance `REMOVED`, with no relocation found anywhere in the new corpus. |
 
 ### 10 · Report — `report.py`
@@ -320,6 +340,7 @@ with provenance, chosen so every branch of the pipeline is reachable from
 | 08 | Comma and casing edit only | `COSMETIC`, no model call |
 | 09 | Document carrying an injection payload | Defences hold, verdict still valid |
 | 10 | Course item with no recorded provenance | Inferred, capped at `NEEDS_REVIEW` |
+| 11 | Same words rearranged into the opposite instruction | `NEEDS_REVIEW` even when the model says `UNAFFECTED` |
 
 ---
 

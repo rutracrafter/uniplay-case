@@ -1,0 +1,305 @@
+{
+  "course_id": "handbook-2026",
+  "title": "Employee Handbook",
+  "items": [
+    {
+      "item_id": "q01",
+      "level_id": "L1",
+      "stem": "Within how many days must notice of leave be given?",
+      "options": [
+        "30 days",
+        "45 days",
+        "14 days",
+        "90 days"
+      ],
+      "correct_index": 0,
+      "provenance": [
+        {
+          "doc_id": "leave-policy.md",
+          "span_id": "leave-policy.md#p0.s0",
+          "snapshot_text": "Notice must be given within 30 days of the intended start date.",
+          "snapshot_hash": "03e4549d90e0cbae",
+          "inferred": false,
+          "infer_score": null
+        }
+      ]
+    },
+    {
+      "item_id": "q02",
+      "level_id": "L1",
+      "stem": "Who must approve leave requests?",
+      "options": [
+        "Managers",
+        "The leave committee",
+        "Any colleague",
+        "Nobody"
+      ],
+      "correct_index": 0,
+      "provenance": [
+        {
+          "doc_id": "leave-policy.md",
+          "span_id": "leave-policy.md#p0.s1",
+          "snapshot_text": "Managers must approve all leave requests.",
+          "snapshot_hash": "71edfb98d7008a27",
+          "inferred": false,
+          "infer_score": null
+        }
+      ]
+    },
+    {
+      "item_id": "q03",
+      "level_id": "L1",
+      "stem": "What happens to unused leave days at the end of the leave year?",
+      "options": [
+        "They are forfeited",
+        "They are paid out",
+        "They roll over indefinitely",
+        "They convert to coins"
+      ],
+      "correct_index": 0,
+      "provenance": [
+        {
+          "doc_id": "leave-policy.md",
+          "span_id": "leave-policy.md#p0.s2",
+          "snapshot_text": "Unused days are forfeited at the end of the leave year.",
+          "snapshot_hash": "0ede7a06ff0d84f1",
+          "inferred": false,
+          "infer_score": null
+        }
+      ]
+    },
+    {
+      "item_id": "q04",
+      "level_id": "L1",
+      "stem": "How long does parental leave run?",
+      "options": [
+        "Twelve consecutive weeks",
+        "Six consecutive weeks",
+        "Twelve working days",
+        "One calendar year"
+      ],
+      "correct_index": 0,
+      "provenance": [
+        {
+          "doc_id": "onboarding.md",
+          "span_id": "onboarding.md#p0.s0",
+          "snapshot_text": "Parental leave runs for twelve consecutive weeks.",
+          "snapshot_hash": "1d657a743916d287",
+          "inferred": false,
+          "infer_score": null
+        }
+      ]
+    },
+    {
+      "item_id": "q05",
+      "level_id": "L1",
+      "stem": "How many days may be carried into the following year?",
+      "options": [
+        "Five",
+        "Ten",
+        "Fifteen",
+        "None"
+      ],
+      "correct_index": 0,
+      "provenance": [
+        {
+          "doc_id": "leave-policy.md",
+          "span_id": "leave-policy.md#p1.s0",
+          "snapshot_text": "Up to five days may be carried into the following year.",
+          "snapshot_hash": "a3ffe34383903899",
+          "inferred": false,
+          "infer_score": null
+        }
+      ]
+    },
+    {
+      "item_id": "q06",
+      "level_id": "L2",
+      "stem": "How long are audit logs kept?",
+      "options": [
+        "Ninety days",
+        "Thirty days",
+        "One year",
+        "Indefinitely"
+      ],
+      "correct_index": 0,
+      "provenance": [
+        {
+          "doc_id": "security-handbook.md",
+          "span_id": "security-handbook.md#p2.s0",
+          "snapshot_text": "Audit logs are kept for ninety days.",
+          "snapshot_hash": "c8c21ace8c9df1d7",
+          "inferred": false,
+          "infer_score": null
+        }
+      ]
+    },
+    {
+      "item_id": "q07",
+      "level_id": "L2",
+      "stem": "When must badges be worn?",
+      "options": [
+        "At all times",
+        "Only in the server room",
+        "Only during audits",
+        "Only when visitors are present"
+      ],
+      "correct_index": 0,
+      "provenance": [
+        {
+          "doc_id": "security-handbook.md",
+          "span_id": "security-handbook.md#p4.s0",
+          "snapshot_text": "Badges must be worn visibly at all times.",
+          "snapshot_hash": "ba55f63073a21e89",
+          "inferred": false,
+          "infer_score": null
+        }
+      ]
+    },
+    {
+      "item_id": "q08",
+      "level_id": "L2",
+      "stem": "What do all accounts require?",
+      "options": [
+        "Multi-factor authentication",
+        "A shared password",
+        "A hardware token only",
+        "Quarterly renewal"
+      ],
+      "correct_index": 0,
+      "provenance": [
+        {
+          "doc_id": "security-handbook.md",
+          "span_id": "security-handbook.md#p0.s0",
+          "snapshot_text": "All accounts require multi-factor authentication.",
+          "snapshot_hash": "11aa428bb3c66544",
+          "inferred": false,
+          "infer_score": null
+        }
+      ]
+    },
+    {
+      "item_id": "q14",
+      "level_id": "L2",
+      "stem": "How should passwords be stored?",
+      "options": [
+        "In a secure password manager",
+        "In plain text",
+        "In a shared spreadsheet",
+        "Written on a whiteboard"
+      ],
+      "correct_index": 0,
+      "provenance": [
+        {
+          "doc_id": "security-handbook.md",
+          "span_id": "security-handbook.md#p3.s0",
+          "snapshot_text": "Always use a secure password manager, never store passwords in plain text.",
+          "snapshot_hash": "5f9538611b8cc9c2",
+          "inferred": false,
+          "infer_score": null
+        }
+      ]
+    },
+    {
+      "item_id": "q09",
+      "level_id": "L3",
+      "stem": "What is the per-diem rate for an overnight stay?",
+      "options": [
+        "Forty euros",
+        "Fifty euros",
+        "Thirty euros",
+        "Sixty euros"
+      ],
+      "correct_index": 0,
+      "provenance": [
+        {
+          "doc_id": "expenses.md",
+          "span_id": "expenses.md#p1.s0",
+          "snapshot_text": "The per-diem rate is forty euros per overnight stay.",
+          "snapshot_hash": "69bee1eeb261a371",
+          "inferred": false,
+          "infer_score": null
+        }
+      ]
+    },
+    {
+      "item_id": "q10",
+      "level_id": "L3",
+      "stem": "At what rate is mileage reimbursed?",
+      "options": [
+        "The published rate",
+        "A flat fee per trip",
+        "The rate set by the employee",
+        "Mileage is not reimbursed"
+      ],
+      "correct_index": 0,
+      "provenance": [
+        {
+          "doc_id": "expenses.md",
+          "span_id": "expenses.md#p0.s1",
+          "snapshot_text": "Mileage is reimbursed at the published rate.",
+          "snapshot_hash": "400d158892ff961a",
+          "inferred": false,
+          "infer_score": null
+        }
+      ]
+    },
+    {
+      "item_id": "q11",
+      "level_id": "L3",
+      "stem": "Above what amount is a receipt required?",
+      "options": [
+        "Fifty euros",
+        "Twenty euros",
+        "One hundred euros",
+        "Receipts are always required"
+      ],
+      "correct_index": 0,
+      "provenance": [
+        {
+          "doc_id": "expenses.md",
+          "span_id": "expenses.md#p0.s0",
+          "snapshot_text": "Receipts are required for any expense over fifty euros.",
+          "snapshot_hash": "c545f28fe370e925",
+          "inferred": false,
+          "infer_score": null
+        }
+      ]
+    },
+    {
+      "item_id": "q13",
+      "level_id": "L2",
+      "stem": "When does the health plan renew?",
+      "options": [
+        "The first of January",
+        "The first of April",
+        "On the hire date",
+        "It does not renew"
+      ],
+      "correct_index": 0,
+      "provenance": [
+        {
+          "doc_id": "benefits.md",
+          "span_id": "benefits.md#p0.s0",
+          "snapshot_text": "The health plan renews on the first of January.",
+          "snapshot_hash": "b60647eb00977fc7",
+          "inferred": false,
+          "infer_score": null
+        }
+      ]
+    },
+    {
+      "item_id": "q12",
+      "level_id": "L3",
+      "stem": "Within how many days must notice of leave be given to a manager?",
+      "options": [
+        "30 days",
+        "45 days",
+        "7 days",
+        "120 days"
+      ],
+      "correct_index": 0,
+      "provenance": []
+    }
+  ]
+}
