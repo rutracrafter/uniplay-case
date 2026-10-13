@@ -16,6 +16,7 @@ from coursedrift.corpus import SuspectCorpus, UnreadableDocument
 from coursedrift.llm.cache import FileCache, NullCache
 from coursedrift.models import Route
 from coursedrift.pipeline import Prepared, build_client, prepare, run_drift
+from coursedrift.progress import NullProgress, Progress, TerminalProgress
 from coursedrift.report import render_json, render_markdown
 from coursedrift.seed import seed_course
 
@@ -27,6 +28,11 @@ app = typer.Typer(
 )
 
 FIXTURES = Path(__file__).resolve().parent.parent / "fixtures"
+
+
+def _progress(quiet: bool) -> Progress:
+    """Progress goes to stderr, so piping the report to a file stays clean."""
+    return NullProgress() if quiet else TerminalProgress()
 
 
 @contextmanager
@@ -86,6 +92,9 @@ def run(
     timeout: Annotated[
         float, typer.Option(help="Seconds to allow per model call. 0 keeps the config value.")
     ] = 0.0,
+    quiet: Annotated[
+        bool, typer.Option("--quiet", "-q", help="Suppress progress output on stderr.")
+    ] = False,
 ) -> None:
     """Run drift detection over a pair of document snapshots."""
     cfg = Config.load(config)
@@ -96,9 +105,11 @@ def run(
     if allow_empty_new:
         cfg = cfg.model_copy(update={"allow_empty_new_snapshot": True})
 
+    status = _progress(quiet)
+
     if client == "none":
         with _readable_errors():
-            _print_deterministic(prepare(old, new, course, cfg))
+            _print_deterministic(prepare(old, new, course, cfg, progress=status))
         return
 
     failures = [mode.strip() for mode in fake_failures.split(",") if mode.strip()]
@@ -110,7 +121,7 @@ def run(
 
     cache = NullCache() if no_cache else FileCache(cfg.cache_dir)
     with _readable_errors():
-        report = run_drift(old, new, course, cfg, implementation, cache)
+        report = run_drift(old, new, course, cfg, implementation, cache, progress=status)
     report.generated_at = datetime.now(UTC).isoformat(timespec="seconds")
 
     markdown = render_markdown(report)
@@ -138,6 +149,9 @@ def demo(
     as_json: Annotated[
         bool, typer.Option("--json", help="Emit the machine-readable report instead.")
     ] = False,
+    quiet: Annotated[
+        bool, typer.Option("--quiet", "-q", help="Suppress progress output on stderr.")
+    ] = False,
 ) -> None:
     """Run drift detection over the bundled fixture corpus.
 
@@ -157,6 +171,7 @@ def demo(
         # golden test depends on it being independent of local state.
         NullCache(),
         labels=("fixtures/docs_v1", "fixtures/docs_v2"),
+        progress=_progress(quiet),
     )
     typer.echo(render_json(report) if as_json else render_markdown(report), nl=False)
 
@@ -177,6 +192,9 @@ def seed(
     ] = None,
     no_cache: Annotated[
         bool, typer.Option("--no-cache", help="Bypass the response cache.")
+    ] = False,
+    quiet: Annotated[
+        bool, typer.Option("--quiet", "-q", help="Suppress progress output on stderr.")
     ] = False,
 ) -> None:
     """Generate a course with recorded provenance from a document directory.
@@ -201,6 +219,7 @@ def seed(
         course_id=course_id,
         title=title,
         max_items=max_items,
+        progress=_progress(quiet),
     )
 
     out.parent.mkdir(parents=True, exist_ok=True)
