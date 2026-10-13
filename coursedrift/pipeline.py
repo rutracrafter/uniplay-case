@@ -13,13 +13,18 @@ from pydantic import BaseModel, Field
 from coursedrift.adjudicate import BROKEN, adjudicate, gather
 from coursedrift.anchor import AnchorReport, resolve_course
 from coursedrift.config import Config
-from coursedrift.corpus import diff_manifests, load_course, load_snapshot
+from coursedrift.corpus import (
+    check_snapshot_pair,
+    diff_manifests,
+    load_course,
+    load_snapshot,
+)
 from coursedrift.diff import MatchResult, match_corpus
 from coursedrift.impact import ImpactCandidate, SkipStats, build_candidates
 from coursedrift.llm.base import CallBudget, CallOutcome, LLMClient
 from coursedrift.llm.cache import Cache
 from coursedrift.llm.fake import FakeClient
-from coursedrift.models import Course, ManifestDiff, Snapshot
+from coursedrift.models import Course, ManifestDiff, Route, Snapshot
 from coursedrift.remediate import Patch, remediate
 from coursedrift.report import RunReport, sort_findings
 from coursedrift.triage import Finding, route_candidate
@@ -46,6 +51,8 @@ def prepare(old_dir: Path, new_dir: Path, course_path: Path, cfg: Config) -> Pre
     old = load_snapshot(old_dir)
     new = load_snapshot(new_dir)
     course = load_course(course_path)
+
+    check_snapshot_pair(old, new, allow_empty_new=cfg.allow_empty_new_snapshot)
 
     manifest = diff_manifests(old, new)
     matches = match_corpus(old, new, cfg, manifest)
@@ -159,6 +166,7 @@ def run_drift(
     findings = sort_findings(judge_all(prepared, client, cfg, cache, budget))
 
     return RunReport(
+        warnings=_input_warnings(findings, cfg),
         course_id=prepared.course.course_id,
         course_title=prepared.course.title,
         old_root=labels[0] if labels else str(old_dir),
@@ -178,3 +186,27 @@ def run_drift(
         model_calls=sum(f.model_calls for f in findings),
         cache_hits=sum(f.cache_hits for f in findings),
     )
+
+
+def _input_warnings(findings: list[Finding], cfg: Config) -> list[str]:
+    """Flag results that look more like a bad input than a real finding.
+
+    An empty new snapshot is refused outright in `check_snapshot_pair`. This
+    catches the softer version: a path that points somewhere real but wrong,
+    or a checkout missing most of the corpus, where a large share of the
+    course orphans at once. The run still produces its report — nothing here
+    is ever applied — but it says plainly that the input looks wrong instead
+    of presenting mass retirement as an ordinary outcome.
+    """
+    if not findings:
+        return []
+    retiring = sum(1 for f in findings if f.route is Route.RETIRE_SUGGESTED)
+    share = retiring / len(findings)
+    if share < cfg.retire_alarm_fraction:
+        return []
+    return [
+        f"{retiring} of {len(findings)} course items ({share:.0%}) lost their source "
+        "material entirely. That is usually a wrong --new path or an incomplete "
+        "snapshot rather than a real deletion — check the input before acting on "
+        "this report."
+    ]

@@ -41,6 +41,8 @@ class RunReport(BaseModel):
     section_counts: dict[str, int] = Field(default_factory=dict)
     model_calls: int = 0
     cache_hits: int = 0
+    warnings: list[str] = Field(default_factory=list)
+    """Things that look like input mistakes rather than findings."""
 
     # Set after the run. Deliberately absent from the Markdown body so the
     # golden comparison stays meaningful.
@@ -215,6 +217,13 @@ def render_markdown(run: RunReport) -> str:
         "",
         "Nothing in this report has been applied. Every proposed fix needs a human.",
         "",
+    ]
+    if run.warnings:
+        lines.append("## Check the input")
+        lines.append("")
+        lines.extend(f"  - **{warning}**" for warning in run.warnings)
+        lines.append("")
+    lines += [
         "## Summary",
         "",
         "| Route | Items |",

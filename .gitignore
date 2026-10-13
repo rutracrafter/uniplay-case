@@ -10,3 +10,6 @@ build/
 *.egg-info/
 out/
 scratch/
+.DS_Store
+.coverage
+htmlcov/

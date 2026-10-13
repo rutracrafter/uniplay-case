@@ -9,7 +9,7 @@ everything else to a human with the evidence attached.
 ```bash
 uv sync        # once
 make demo      # seeded end-to-end run: no network, no model, no flags
-make test      # 341 tests
+make test      # 378 tests, offline
 make check     # ruff + mypy
 ```
 
@@ -80,6 +80,35 @@ anchor, inferred provenance, a patch that failed validation.
 [OVERVIEW.md](OVERVIEW.md) has the design rationale and
 [PLAN.md](PLAN.md) the phase-by-phase build.
 
+## Testing
+
+```bash
+make test        # 378 tests, offline and deterministic
+make test-live   # opt-in: talks to a real Ollama daemon
+make check       # ruff + mypy
+```
+
+| kind | what it covers |
+| --- | --- |
+| Unit | The LIS primitive, the normalization contract, every patch validator, and triage's precedence as a truth table. |
+| Property-based | The core invariant over generated documents and arbitrary permutations, plus span conservation — every span accounted for exactly once — and the LIS cross-checked against a reference implementation. |
+| Integration | Real files on disk, exercising corpus → segment → diff → anchor → impact together. |
+| Fault injection | Every recovery path driven through the fake client's seven failure modes. |
+| Contract | The Ollama HTTP shape and failure mapping, through a mock transport. |
+| End-to-end | The full pipeline against byte-exact golden reports, both markdown and JSON; the CLI; and the seed → run loop. |
+| Live, opt-in | A real model, including the regression for the thinking-model timeout. Excluded by default so the suite stays offline. |
+
+Both golden reports are refreshed deliberately, never automatically:
+
+```bash
+uv run drift demo        > tests/golden/demo_report.md
+uv run drift demo --json > tests/golden/demo_report.json
+```
+
+The JSON one matters because `drift_report.json` is the machine interface:
+without it, a change to the report's shape passes the suite while silently
+breaking anything consuming it.
+
 ## Treating the model as a component
 
 - Every response parses into a Pydantic model with closed enums and
@@ -111,3 +140,6 @@ anchor, inferred provenance, a patch that failed validation.
   is shaped for a review queue with approve, reject and escalate.
 - **Embeddings for anchoring.** Hash plus fuzzy matching is enough here and is
   deterministic, which a similarity index is not.
+- **A performance guard on Phase B.** Nothing currently asserts that shingle
+  blocking keeps candidate scoring near-linear. See the deferred section of
+  [PLAN.md](PLAN.md) for why it waits for a larger corpus.

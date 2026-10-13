@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
 import typer
+from pydantic import ValidationError
 
 from coursedrift.config import Config
+from coursedrift.corpus import SuspectCorpus, UnreadableDocument
 from coursedrift.llm.cache import FileCache, NullCache
 from coursedrift.models import Route
 from coursedrift.pipeline import Prepared, build_client, prepare, run_drift
@@ -23,6 +27,24 @@ app = typer.Typer(
 )
 
 FIXTURES = Path(__file__).resolve().parent.parent / "fixtures"
+
+
+@contextmanager
+def _readable_errors() -> Iterator[None]:
+    """Turn bad-input failures into a message and exit 2, not a traceback.
+
+    A corpus that cannot be decoded, or a snapshot pair that looks like a
+    wrong path, is the operator's problem to fix. Printing a stack trace
+    tells them less than one sentence does.
+    """
+    try:
+        yield
+    except (UnreadableDocument, SuspectCorpus, ValidationError) as error:
+        typer.secho(str(error), fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=2) from error
+    except (OSError, NotADirectoryError) as error:
+        typer.secho(f"Could not read the inputs: {error}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=2) from error
 
 
 @app.command()
@@ -50,6 +72,13 @@ def run(
     no_cache: Annotated[
         bool, typer.Option("--no-cache", help="Bypass the response cache.")
     ] = False,
+    allow_empty_new: Annotated[
+        bool,
+        typer.Option(
+            "--allow-empty-new",
+            help="Accept a new snapshot with no documents. Retires the whole course.",
+        ),
+    ] = False,
     fail_on_drift: Annotated[
         bool,
         typer.Option("--fail-on-drift", help="Exit non-zero when drift is found, for CI."),
@@ -64,9 +93,12 @@ def run(
         cfg = cfg.model_copy(update={"votes": votes})
     if timeout:
         cfg = cfg.model_copy(update={"timeout_s": timeout})
+    if allow_empty_new:
+        cfg = cfg.model_copy(update={"allow_empty_new_snapshot": True})
 
     if client == "none":
-        _print_deterministic(prepare(old, new, course, cfg))
+        with _readable_errors():
+            _print_deterministic(prepare(old, new, course, cfg))
         return
 
     failures = [mode.strip() for mode in fake_failures.split(",") if mode.strip()]
@@ -77,7 +109,8 @@ def run(
         raise typer.Exit(code=2) from error
 
     cache = NullCache() if no_cache else FileCache(cfg.cache_dir)
-    report = run_drift(old, new, course, cfg, implementation, cache)
+    with _readable_errors():
+        report = run_drift(old, new, course, cfg, implementation, cache)
     report.generated_at = datetime.now(UTC).isoformat(timespec="seconds")
 
     markdown = render_markdown(report)
@@ -102,6 +135,9 @@ def demo(
     fake_failures: Annotated[
         str, typer.Option(help="Comma-separated fake failure modes to inject.")
     ] = "",
+    as_json: Annotated[
+        bool, typer.Option("--json", help="Emit the machine-readable report instead.")
+    ] = False,
 ) -> None:
     """Run drift detection over the bundled fixture corpus.
 
@@ -122,7 +158,7 @@ def demo(
         NullCache(),
         labels=("fixtures/docs_v1", "fixtures/docs_v2"),
     )
-    typer.echo(render_markdown(report), nl=False)
+    typer.echo(render_json(report) if as_json else render_markdown(report), nl=False)
 
 
 @app.command()

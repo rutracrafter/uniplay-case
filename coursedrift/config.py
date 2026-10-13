@@ -67,6 +67,21 @@ class Config(BaseModel):
     answer into one timeout.
     """
 
+    allow_empty_new_snapshot: bool = False
+    """Permit a new snapshot with no documents at all.
+
+    Off by default: an empty new snapshot orphans every item and proposes
+    retiring the whole course, which is far more often a wrong --new path
+    than a real deletion.
+    """
+
+    retire_alarm_fraction: float = Field(default=0.5, gt=0.0, le=1.0)
+    """Share of a course routed to retirement that warrants a warning.
+
+    Above this, the report says plainly that the input looks wrong rather
+    than presenting mass retirement as an ordinary result.
+    """
+
     cache_dir: Path = Field(default=Path(".drift_cache"))
     """Where validated responses are memoized, keyed by client and prompt."""
 

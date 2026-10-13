@@ -16,6 +16,7 @@ drift = "coursedrift.cli:app"
 [dependency-groups]
 dev = [
     "pytest>=8.0",
+    "hypothesis>=6.100",
     "ruff>=0.6",
     "mypy>=1.11",
 ]
@@ -50,4 +51,7 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q"
+addopts = "-q -m 'not live'"
+markers = [
+    "live: needs a running Ollama daemon; skipped unless DRIFT_LIVE_OLLAMA=1",
+]
