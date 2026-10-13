@@ -41,9 +41,25 @@ class Route(StrEnum):
 class Span(BaseModel):
     """One addressable unit of source material: normally a sentence.
 
-    `hash` is the identity used by Phase A of the matcher, so it is derived
-    from `norm_text` and never from position. `order` is the document-wide
-    sentence ordinal and exists only so Phase C can classify movement.
+    Two fields look like they violate the core invariant and do not, which is
+    worth stating since the question comes up:
+
+    `hash` is the identity Phase A matches on, derived from `norm_text` and
+    never from position. `span_id` is a *name* for this span within its own
+    snapshot, not an identity claim across snapshots — needed because content
+    is deliberately not unique (duplicate boilerplate shares a hash), so the
+    one-to-one constraint in Phase B, the change table, and deterministic
+    sorting all need per-span names. The two places it used to reach across
+    the snapshot boundary are gone: it is no longer an anchor tiebreak, and
+    `_from_match` verifies the recorded hash before trusting it.
+
+    `order` is the document-wide sentence ordinal, used only for what the
+    invariant's second clause permits — classifying movement in Phase C — and
+    for deterministic ordering of output.
+
+    Nothing else positional is stored. `para_index` and `sent_index` were
+    kept here until they turned out to be written and never read; they were
+    decomposed copies of what `span_id` already spells out.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -51,8 +67,6 @@ class Span(BaseModel):
     span_id: str
     doc_id: str
     section_path: tuple[str, ...] = ()
-    para_index: int
-    sent_index: int
     order: int
     text: str
     norm_text: str
@@ -76,7 +90,6 @@ class Section(BaseModel):
     doc_id: str
     path: tuple[str, ...]
     heading: str
-    level: int
     span_hashes: frozenset[str]
     order: int
 
