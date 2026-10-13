@@ -20,18 +20,28 @@ def requires_adjudication(change: SpanChange) -> bool:
 
     The two-axis table from OVERVIEW.md, as one function:
 
+        any       / REPARENTED  -> yes, same material in a different context
         IDENTICAL / STABLE      -> no, not a change at all
         IDENTICAL / MOVED       -> no, structural only
-        IDENTICAL / REPARENTED  -> yes, same words in a different context
-        COSMETIC  / any         -> no, deterministically trivial
+        COSMETIC  / STABLE|MOVED-> no, deterministically trivial
         MODIFIED  / any         -> yes
-        REMOVED                 -> no, deterministic retire candidate
+        REMOVED / ADDED         -> no, handled deterministically
+
+    The axes are tested independently, and that ordering is the point. An
+    earlier version asked about reparenting only when the content was
+    IDENTICAL, which meant the two axes could collide: add a comma to a
+    sentence that also moves into a "Deprecated Practices" section and the
+    content op becomes COSMETIC, the reparenting question is never asked, and
+    the item is dismissed as trivial. The irrelevant half of the change hid
+    the dangerous half.
+
+    A span cannot be REPARENTED and REMOVED at once — removals keep position
+    NONE and never enter `_apply_reparenting` — so the first clause cannot
+    pull a retire candidate into the model queue.
     """
-    if change.content is ContentOp.MODIFIED:
+    if change.position is PositionOp.REPARENTED:
         return True
-    if change.content is ContentOp.IDENTICAL:
-        return change.position is PositionOp.REPARENTED
-    return False
+    return change.content is ContentOp.MODIFIED
 
 
 class ImpactCandidate(BaseModel):

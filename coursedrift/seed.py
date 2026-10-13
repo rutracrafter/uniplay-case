@@ -18,6 +18,7 @@ from coursedrift.llm import prompts
 from coursedrift.llm.base import CallBudget, LLMClient, call_validated
 from coursedrift.llm.cache import Cache
 from coursedrift.models import Course, CourseItem, Span
+from coursedrift.progress import NullProgress, Progress
 from coursedrift.remediate import Patch, patch_validators
 from coursedrift.segment import normalize
 
@@ -84,6 +85,7 @@ def seed_course(
     course_id: str = "seeded-course",
     title: str = "Seeded Course",
     max_items: int = 12,
+    progress: Progress | None = None,
 ) -> SeedReport:
     """Write one question per selected span, recording where it came from.
 
@@ -95,8 +97,13 @@ def seed_course(
     """
     budget = CallBudget(cfg.max_calls)
     report = SeedReport(course=Course(course_id=course_id, title=title))
+    status = progress or NullProgress()
 
-    for index, span in enumerate(candidate_spans(docs, max_items), start=1):
+    spans = candidate_spans(docs, max_items)
+    status.stage(f"Writing {len(spans)} question(s) using {client.name}")
+
+    for index, span in enumerate(spans, start=1):
+        status.working(f"[{index}/{len(spans)}] {span.span_id} - asking the model...")
         section = " > ".join(span.section_path) or "(document root)"
         prompt = prompts.seed_prompt(source=span.text, section=f"{span.doc_id}: {section}")
         haystack = normalize(span.text).casefold()
@@ -113,7 +120,9 @@ def seed_course(
         )
         if not outcome.ok or outcome.value is None:
             report.rejected.append(f"{span.span_id}: {outcome.reason}")
+            status.done(f"[{index}/{len(spans)}] dropped - {outcome.reason}")
             continue
+        status.done(f"[{index}/{len(spans)}] q{index:02d} written")
 
         written = outcome.value
         report.course.items.append(

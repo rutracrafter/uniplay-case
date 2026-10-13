@@ -1,4 +1,4 @@
-.PHONY: demo test check fmt install
+.PHONY: demo test test-live eval check fmt install
 
 install:
 	uv sync
@@ -8,6 +8,13 @@ demo:
 
 test:
 	uv run pytest
+
+eval:
+	uv run pytest tests/test_demo_golden.py tests/test_report_schema.py \
+		-o addopts="" -v -p no:cacheprovider
+
+test-live:
+	DRIFT_LIVE_OLLAMA=1 uv run pytest -m live -p no:cacheprovider
 
 check:
 	uv run ruff check coursedrift tests

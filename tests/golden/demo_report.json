@@ -1,0 +1,1246 @@
+{
+  "course_id": "handbook-2026",
+  "course_title": "Employee Handbook",
+  "old_root": "fixtures/docs_v1",
+  "new_root": "fixtures/docs_v2",
+  "client": "fake",
+  "config": {
+    "similarity_match": 0.6,
+    "cosmetic_similarity": 0.95,
+    "shingle_n": 3,
+    "jaccard_match": 0.4,
+    "jaccard_part": 0.25,
+    "anchor_fuzzy": 0.85,
+    "infer_top_k": 3,
+    "confidence_floor": 0.75,
+    "votes": 1,
+    "timeout_s": 30.0,
+    "max_attempts": 2,
+    "max_calls": 500,
+    "max_output_tokens": 1024,
+    "allow_empty_new_snapshot": false,
+    "retire_alarm_fraction": 0.5,
+    "cache_dir": ".drift_cache"
+  },
+  "stats": {
+    "total_items": 14,
+    "untouched": 1,
+    "skipped_no_impact": 6,
+    "decided_deterministically": 1,
+    "sent_to_model": 6,
+    "cosmetic_spans": 1,
+    "moved_spans": 2
+  },
+  "findings": [
+    {
+      "item_id": "q09",
+      "level_id": "L3",
+      "route": "RETIRE_SUGGESTED",
+      "reasons": [
+        "all 1 source span(s) removed with no relocation found"
+      ],
+      "verdict": null,
+      "confidence": null,
+      "rationale": "",
+      "evidence": [],
+      "unanimous": true,
+      "patch": null,
+      "rejected_patch": null,
+      "changes": [
+        {
+          "content": "REMOVED",
+          "position": "NONE",
+          "old": {
+            "span_id": "expenses.md#p1.s0",
+            "doc_id": "expenses.md",
+            "section_path": [
+              "Expenses",
+              "Per-diem"
+            ],
+            "order": 2,
+            "text": "The per-diem rate is forty euros per overnight stay.",
+            "norm_text": "The per-diem rate is forty euros per overnight stay.",
+            "hash": "69bee1eeb261a371"
+          },
+          "new": null,
+          "similarity": null,
+          "pair_score": null,
+          "reordered": false,
+          "inline_diff": null,
+          "across_docs": false
+        }
+      ],
+      "anchors": [
+        {
+          "ref": {
+            "doc_id": "expenses.md",
+            "span_id": "expenses.md#p1.s0",
+            "snapshot_text": "The per-diem rate is forty euros per overnight stay.",
+            "snapshot_hash": "69bee1eeb261a371",
+            "inferred": false,
+            "infer_score": null
+          },
+          "status": "ORPHANED",
+          "new_span": null,
+          "candidates": [],
+          "similarity": null
+        }
+      ],
+      "inferred_provenance": false,
+      "model_calls": 0,
+      "cache_hits": 0
+    },
+    {
+      "item_id": "q10",
+      "level_id": "L3",
+      "route": "NEEDS_REVIEW",
+      "reasons": [
+        "1 source span(s) require judgment",
+        "a source span moved to a different section with its wording essentially unchanged"
+      ],
+      "verdict": "UNAFFECTED",
+      "confidence": 0.85,
+      "rationale": "The wording changed without altering what the source states, so the question still has the same correct answer.",
+      "evidence": [
+        "Mileage is reimbursed at the published rate."
+      ],
+      "unanimous": true,
+      "patch": null,
+      "rejected_patch": null,
+      "changes": [
+        {
+          "content": "IDENTICAL",
+          "position": "REPARENTED",
+          "old": {
+            "span_id": "expenses.md#p0.s1",
+            "doc_id": "expenses.md",
+            "section_path": [
+              "Expenses"
+            ],
+            "order": 1,
+            "text": "Mileage is reimbursed at the published rate.",
+            "norm_text": "Mileage is reimbursed at the published rate.",
+            "hash": "400d158892ff961a"
+          },
+          "new": {
+            "span_id": "expenses.md#p1.s1",
+            "doc_id": "expenses.md",
+            "section_path": [
+              "Expenses",
+              "Deprecated Practices"
+            ],
+            "order": 2,
+            "text": "Mileage is reimbursed at the published rate.",
+            "norm_text": "Mileage is reimbursed at the published rate.",
+            "hash": "400d158892ff961a"
+          },
+          "similarity": 1.0,
+          "pair_score": 1.0,
+          "reordered": false,
+          "inline_diff": null,
+          "across_docs": false
+        }
+      ],
+      "anchors": [
+        {
+          "ref": {
+            "doc_id": "expenses.md",
+            "span_id": "expenses.md#p0.s1",
+            "snapshot_text": "Mileage is reimbursed at the published rate.",
+            "snapshot_hash": "400d158892ff961a",
+            "inferred": false,
+            "infer_score": null
+          },
+          "status": "MOVED",
+          "new_span": {
+            "span_id": "expenses.md#p1.s1",
+            "doc_id": "expenses.md",
+            "section_path": [
+              "Expenses",
+              "Deprecated Practices"
+            ],
+            "order": 2,
+            "text": "Mileage is reimbursed at the published rate.",
+            "norm_text": "Mileage is reimbursed at the published rate.",
+            "hash": "400d158892ff961a"
+          },
+          "candidates": [],
+          "similarity": 1.0
+        }
+      ],
+      "inferred_provenance": false,
+      "model_calls": 1,
+      "cache_hits": 0
+    },
+    {
+      "item_id": "q12",
+      "level_id": "L3",
+      "route": "NEEDS_REVIEW",
+      "reasons": [
+        "2 source span(s) require judgment",
+        "provenance was inferred, not recorded"
+      ],
+      "verdict": "INVALIDATED",
+      "confidence": 0.9,
+      "rationale": "A figure in the source material changed, so a question keyed to the old figure can no longer be answered correctly.",
+      "evidence": [
+        "Notice must be given within 45 days of the intended start date."
+      ],
+      "unanimous": true,
+      "patch": null,
+      "rejected_patch": null,
+      "changes": [
+        {
+          "content": "MODIFIED",
+          "position": "STABLE",
+          "old": {
+            "span_id": "leave-policy.md#p0.s0",
+            "doc_id": "leave-policy.md",
+            "section_path": [
+              "Leave Policy"
+            ],
+            "order": 0,
+            "text": "Notice must be given within 30 days of the intended start date.",
+            "norm_text": "Notice must be given within 30 days of the intended start date.",
+            "hash": "03e4549d90e0cbae"
+          },
+          "new": {
+            "span_id": "leave-policy.md#p0.s0",
+            "doc_id": "leave-policy.md",
+            "section_path": [
+              "Leave Policy"
+            ],
+            "order": 0,
+            "text": "Notice must be given within 45 days of the intended start date.",
+            "norm_text": "Notice must be given within 45 days of the intended start date.",
+            "hash": "62dc692ba86ca1e1"
+          },
+          "similarity": 0.9682539682539683,
+          "pair_score": 0.975609756097561,
+          "reordered": false,
+          "inline_diff": "Notice must be given within [-30-]{+45+} days of the intended start date.",
+          "across_docs": false
+        },
+        {
+          "content": "IDENTICAL",
+          "position": "STABLE",
+          "old": {
+            "span_id": "leave-policy.md#p1.s0",
+            "doc_id": "leave-policy.md",
+            "section_path": [
+              "Leave Policy",
+              "Carry-over"
+            ],
+            "order": 3,
+            "text": "Up to five days may be carried into the following year.",
+            "norm_text": "Up to five days may be carried into the following year.",
+            "hash": "a3ffe34383903899"
+          },
+          "new": {
+            "span_id": "leave-policy.md#p2.s0",
+            "doc_id": "leave-policy.md",
+            "section_path": [
+              "Leave Policy",
+              "Carry-over"
+            ],
+            "order": 4,
+            "text": "Up to five days may be carried into the following year.",
+            "norm_text": "Up to five days may be carried into the following year.",
+            "hash": "a3ffe34383903899"
+          },
+          "similarity": 1.0,
+          "pair_score": 1.0,
+          "reordered": false,
+          "inline_diff": null,
+          "across_docs": false
+        },
+        {
+          "content": "MODIFIED",
+          "position": "STABLE",
+          "old": {
+            "span_id": "leave-policy.md#p0.s2",
+            "doc_id": "leave-policy.md",
+            "section_path": [
+              "Leave Policy"
+            ],
+            "order": 2,
+            "text": "Unused days are forfeited at the end of the leave year.",
+            "norm_text": "Unused days are forfeited at the end of the leave year.",
+            "hash": "0ede7a06ff0d84f1"
+          },
+          "new": {
+            "span_id": "leave-policy.md#p0.s2",
+            "doc_id": "leave-policy.md",
+            "section_path": [
+              "Leave Policy"
+            ],
+            "order": 2,
+            "text": "Unused days may be forfeited at the end of the leave year, depending on local policy.",
+            "norm_text": "Unused days may be forfeited at the end of the leave year, depending on local policy.",
+            "hash": "93d2935c38efe9bb"
+          },
+          "similarity": 0.7714285714285716,
+          "pair_score": 0.8913043478260869,
+          "reordered": false,
+          "inline_diff": "Unused days [-are-]{+may be+} forfeited at the end of the leave [-year.-]{+year, depending on local policy.+}",
+          "across_docs": false
+        }
+      ],
+      "anchors": [
+        {
+          "ref": {
+            "doc_id": "leave-policy.md",
+            "span_id": "leave-policy.md#p0.s0",
+            "snapshot_text": "Notice must be given within 30 days of the intended start date.",
+            "snapshot_hash": "03e4549d90e0cbae",
+            "inferred": true,
+            "infer_score": 14.4851
+          },
+          "status": "RESOLVED",
+          "new_span": {
+            "span_id": "leave-policy.md#p0.s0",
+            "doc_id": "leave-policy.md",
+            "section_path": [
+              "Leave Policy"
+            ],
+            "order": 0,
+            "text": "Notice must be given within 45 days of the intended start date.",
+            "norm_text": "Notice must be given within 45 days of the intended start date.",
+            "hash": "62dc692ba86ca1e1"
+          },
+          "candidates": [],
+          "similarity": 0.9682539682539683
+        },
+        {
+          "ref": {
+            "doc_id": "leave-policy.md",
+            "span_id": "leave-policy.md#p1.s0",
+            "snapshot_text": "Up to five days may be carried into the following year.",
+            "snapshot_hash": "a3ffe34383903899",
+            "inferred": true,
+            "infer_score": 6.2385
+          },
+          "status": "RESOLVED",
+          "new_span": {
+            "span_id": "leave-policy.md#p2.s0",
+            "doc_id": "leave-policy.md",
+            "section_path": [
+              "Leave Policy",
+              "Carry-over"
+            ],
+            "order": 4,
+            "text": "Up to five days may be carried into the following year.",
+            "norm_text": "Up to five days may be carried into the following year.",
+            "hash": "a3ffe34383903899"
+          },
+          "candidates": [],
+          "similarity": 1.0
+        },
+        {
+          "ref": {
+            "doc_id": "leave-policy.md",
+            "span_id": "leave-policy.md#p0.s2",
+            "snapshot_text": "Unused days are forfeited at the end of the leave year.",
+            "snapshot_hash": "0ede7a06ff0d84f1",
+            "inferred": true,
+            "infer_score": 5.6817
+          },
+          "status": "RESOLVED",
+          "new_span": {
+            "span_id": "leave-policy.md#p0.s2",
+            "doc_id": "leave-policy.md",
+            "section_path": [
+              "Leave Policy"
+            ],
+            "order": 2,
+            "text": "Unused days may be forfeited at the end of the leave year, depending on local policy.",
+            "norm_text": "Unused days may be forfeited at the end of the leave year, depending on local policy.",
+            "hash": "93d2935c38efe9bb"
+          },
+          "candidates": [],
+          "similarity": 0.7714285714285716
+        }
+      ],
+      "inferred_provenance": true,
+      "model_calls": 2,
+      "cache_hits": 0
+    },
+    {
+      "item_id": "q03",
+      "level_id": "L1",
+      "route": "NEEDS_REVIEW",
+      "reasons": [
+        "1 source span(s) require judgment",
+        "the model could not determine the impact and abstained"
+      ],
+      "verdict": "UNCERTAIN",
+      "confidence": 0.4,
+      "rationale": "The replacement wording is hedged, so whether the question remains answerable cannot be settled from the text alone.",
+      "evidence": [
+        "Unused days may be forfeited at the end of the leave year, depending on local policy."
+      ],
+      "unanimous": true,
+      "patch": null,
+      "rejected_patch": null,
+      "changes": [
+        {
+          "content": "MODIFIED",
+          "position": "STABLE",
+          "old": {
+            "span_id": "leave-policy.md#p0.s2",
+            "doc_id": "leave-policy.md",
+            "section_path": [
+              "Leave Policy"
+            ],
+            "order": 2,
+            "text": "Unused days are forfeited at the end of the leave year.",
+            "norm_text": "Unused days are forfeited at the end of the leave year.",
+            "hash": "0ede7a06ff0d84f1"
+          },
+          "new": {
+            "span_id": "leave-policy.md#p0.s2",
+            "doc_id": "leave-policy.md",
+            "section_path": [
+              "Leave Policy"
+            ],
+            "order": 2,
+            "text": "Unused days may be forfeited at the end of the leave year, depending on local policy.",
+            "norm_text": "Unused days may be forfeited at the end of the leave year, depending on local policy.",
+            "hash": "93d2935c38efe9bb"
+          },
+          "similarity": 0.7714285714285716,
+          "pair_score": 0.8913043478260869,
+          "reordered": false,
+          "inline_diff": "Unused days [-are-]{+may be+} forfeited at the end of the leave [-year.-]{+year, depending on local policy.+}",
+          "across_docs": false
+        }
+      ],
+      "anchors": [
+        {
+          "ref": {
+            "doc_id": "leave-policy.md",
+            "span_id": "leave-policy.md#p0.s2",
+            "snapshot_text": "Unused days are forfeited at the end of the leave year.",
+            "snapshot_hash": "0ede7a06ff0d84f1",
+            "inferred": false,
+            "infer_score": null
+          },
+          "status": "RESOLVED",
+          "new_span": {
+            "span_id": "leave-policy.md#p0.s2",
+            "doc_id": "leave-policy.md",
+            "section_path": [
+              "Leave Policy"
+            ],
+            "order": 2,
+            "text": "Unused days may be forfeited at the end of the leave year, depending on local policy.",
+            "norm_text": "Unused days may be forfeited at the end of the leave year, depending on local policy.",
+            "hash": "93d2935c38efe9bb"
+          },
+          "candidates": [],
+          "similarity": 0.7714285714285716
+        }
+      ],
+      "inferred_provenance": false,
+      "model_calls": 1,
+      "cache_hits": 0
+    },
+    {
+      "item_id": "q14",
+      "level_id": "L2",
+      "route": "NEEDS_REVIEW",
+      "reasons": [
+        "1 source span(s) require judgment",
+        "a source span was rewritten with the same words in a different order, which can reverse its meaning"
+      ],
+      "verdict": "UNAFFECTED",
+      "confidence": 0.85,
+      "rationale": "The wording changed without altering what the source states, so the question still has the same correct answer.",
+      "evidence": [
+        "Never use a secure password manager, always store passwords in plain text."
+      ],
+      "unanimous": true,
+      "patch": null,
+      "rejected_patch": null,
+      "changes": [
+        {
+          "content": "MODIFIED",
+          "position": "STABLE",
+          "old": {
+            "span_id": "security-handbook.md#p3.s0",
+            "doc_id": "security-handbook.md",
+            "section_path": [
+              "Password Management"
+            ],
+            "order": 6,
+            "text": "Always use a secure password manager, never store passwords in plain text.",
+            "norm_text": "Always use a secure password manager, never store passwords in plain text.",
+            "hash": "5f9538611b8cc9c2"
+          },
+          "new": {
+            "span_id": "security-handbook.md#p3.s0",
+            "doc_id": "security-handbook.md",
+            "section_path": [
+              "Password Management"
+            ],
+            "order": 6,
+            "text": "Never use a secure password manager, always store passwords in plain text.",
+            "norm_text": "Never use a secure password manager, always store passwords in plain text.",
+            "hash": "12cca6e16ca50392"
+          },
+          "similarity": 0.8513513513513513,
+          "pair_score": 1.0,
+          "reordered": true,
+          "inline_diff": "[-Always-]{+Never+} use a secure password manager, [-never-]{+always+} store passwords in plain text.",
+          "across_docs": false
+        }
+      ],
+      "anchors": [
+        {
+          "ref": {
+            "doc_id": "security-handbook.md",
+            "span_id": "security-handbook.md#p3.s0",
+            "snapshot_text": "Always use a secure password manager, never store passwords in plain text.",
+            "snapshot_hash": "5f9538611b8cc9c2",
+            "inferred": false,
+            "infer_score": null
+          },
+          "status": "RESOLVED",
+          "new_span": {
+            "span_id": "security-handbook.md#p3.s0",
+            "doc_id": "security-handbook.md",
+            "section_path": [
+              "Password Management"
+            ],
+            "order": 6,
+            "text": "Never use a secure password manager, always store passwords in plain text.",
+            "norm_text": "Never use a secure password manager, always store passwords in plain text.",
+            "hash": "12cca6e16ca50392"
+          },
+          "candidates": [],
+          "similarity": 0.8513513513513513
+        }
+      ],
+      "inferred_provenance": false,
+      "model_calls": 1,
+      "cache_hits": 0
+    },
+    {
+      "item_id": "q01",
+      "level_id": "L1",
+      "route": "AUTO_FIX_PROPOSED",
+      "reasons": [
+        "1 source span(s) require judgment",
+        "verdict INVALIDATED at confidence 0.90, and the proposed fix passed every validator"
+      ],
+      "verdict": "INVALIDATED",
+      "confidence": 0.9,
+      "rationale": "A figure in the source material changed, so a question keyed to the old figure can no longer be answered correctly.",
+      "evidence": [
+        "Notice must be given within 45 days of the intended start date."
+      ],
+      "unanimous": true,
+      "patch": {
+        "stem": "Within how many days must notice of leave be given?",
+        "options": [
+          "30 days",
+          "45 days",
+          "14 days",
+          "90 days"
+        ],
+        "correct_index": 1,
+        "grounded_in": "Notice must be given within 45 days of the intended start date."
+      },
+      "rejected_patch": null,
+      "changes": [
+        {
+          "content": "MODIFIED",
+          "position": "STABLE",
+          "old": {
+            "span_id": "leave-policy.md#p0.s0",
+            "doc_id": "leave-policy.md",
+            "section_path": [
+              "Leave Policy"
+            ],
+            "order": 0,
+            "text": "Notice must be given within 30 days of the intended start date.",
+            "norm_text": "Notice must be given within 30 days of the intended start date.",
+            "hash": "03e4549d90e0cbae"
+          },
+          "new": {
+            "span_id": "leave-policy.md#p0.s0",
+            "doc_id": "leave-policy.md",
+            "section_path": [
+              "Leave Policy"
+            ],
+            "order": 0,
+            "text": "Notice must be given within 45 days of the intended start date.",
+            "norm_text": "Notice must be given within 45 days of the intended start date.",
+            "hash": "62dc692ba86ca1e1"
+          },
+          "similarity": 0.9682539682539683,
+          "pair_score": 0.975609756097561,
+          "reordered": false,
+          "inline_diff": "Notice must be given within [-30-]{+45+} days of the intended start date.",
+          "across_docs": false
+        }
+      ],
+      "anchors": [
+        {
+          "ref": {
+            "doc_id": "leave-policy.md",
+            "span_id": "leave-policy.md#p0.s0",
+            "snapshot_text": "Notice must be given within 30 days of the intended start date.",
+            "snapshot_hash": "03e4549d90e0cbae",
+            "inferred": false,
+            "infer_score": null
+          },
+          "status": "RESOLVED",
+          "new_span": {
+            "span_id": "leave-policy.md#p0.s0",
+            "doc_id": "leave-policy.md",
+            "section_path": [
+              "Leave Policy"
+            ],
+            "order": 0,
+            "text": "Notice must be given within 45 days of the intended start date.",
+            "norm_text": "Notice must be given within 45 days of the intended start date.",
+            "hash": "62dc692ba86ca1e1"
+          },
+          "candidates": [],
+          "similarity": 0.9682539682539683
+        }
+      ],
+      "inferred_provenance": false,
+      "model_calls": 2,
+      "cache_hits": 0
+    },
+    {
+      "item_id": "q13",
+      "level_id": "L2",
+      "route": "OK",
+      "reasons": [
+        "no source span changed"
+      ],
+      "verdict": null,
+      "confidence": null,
+      "rationale": "",
+      "evidence": [],
+      "unanimous": true,
+      "patch": null,
+      "rejected_patch": null,
+      "changes": [],
+      "anchors": [
+        {
+          "ref": {
+            "doc_id": "benefits.md",
+            "span_id": "benefits.md#p0.s0",
+            "snapshot_text": "The health plan renews on the first of January.",
+            "snapshot_hash": "b60647eb00977fc7",
+            "inferred": false,
+            "infer_score": null
+          },
+          "status": "RESOLVED",
+          "new_span": {
+            "span_id": "benefits.md#p0.s0",
+            "doc_id": "benefits.md",
+            "section_path": [
+              "Benefits"
+            ],
+            "order": 0,
+            "text": "The health plan renews on the first of January.",
+            "norm_text": "The health plan renews on the first of January.",
+            "hash": "b60647eb00977fc7"
+          },
+          "candidates": [],
+          "similarity": 1.0
+        }
+      ],
+      "inferred_provenance": false,
+      "model_calls": 0,
+      "cache_hits": 0
+    },
+    {
+      "item_id": "q11",
+      "level_id": "L3",
+      "route": "OK",
+      "reasons": [
+        "source changed only in ways that cannot affect the question (IDENTICAL)"
+      ],
+      "verdict": null,
+      "confidence": null,
+      "rationale": "",
+      "evidence": [],
+      "unanimous": true,
+      "patch": null,
+      "rejected_patch": null,
+      "changes": [
+        {
+          "content": "IDENTICAL",
+          "position": "STABLE",
+          "old": {
+            "span_id": "expenses.md#p0.s0",
+            "doc_id": "expenses.md",
+            "section_path": [
+              "Expenses"
+            ],
+            "order": 0,
+            "text": "Receipts are required for any expense over fifty euros.",
+            "norm_text": "Receipts are required for any expense over fifty euros.",
+            "hash": "c545f28fe370e925"
+          },
+          "new": {
+            "span_id": "expenses.md#p0.s0",
+            "doc_id": "expenses.md",
+            "section_path": [
+              "Expenses"
+            ],
+            "order": 0,
+            "text": "Receipts are required for any expense over fifty euros.",
+            "norm_text": "Receipts are required for any expense over fifty euros.",
+            "hash": "c545f28fe370e925"
+          },
+          "similarity": 1.0,
+          "pair_score": 1.0,
+          "reordered": false,
+          "inline_diff": null,
+          "across_docs": false
+        }
+      ],
+      "anchors": [
+        {
+          "ref": {
+            "doc_id": "expenses.md",
+            "span_id": "expenses.md#p0.s0",
+            "snapshot_text": "Receipts are required for any expense over fifty euros.",
+            "snapshot_hash": "c545f28fe370e925",
+            "inferred": false,
+            "infer_score": null
+          },
+          "status": "RESOLVED",
+          "new_span": {
+            "span_id": "expenses.md#p0.s0",
+            "doc_id": "expenses.md",
+            "section_path": [
+              "Expenses"
+            ],
+            "order": 0,
+            "text": "Receipts are required for any expense over fifty euros.",
+            "norm_text": "Receipts are required for any expense over fifty euros.",
+            "hash": "c545f28fe370e925"
+          },
+          "candidates": [],
+          "similarity": 1.0
+        }
+      ],
+      "inferred_provenance": false,
+      "model_calls": 0,
+      "cache_hits": 0
+    },
+    {
+      "item_id": "q02",
+      "level_id": "L1",
+      "route": "OK",
+      "reasons": [
+        "1 source span(s) require judgment",
+        "the change does not affect this question"
+      ],
+      "verdict": "UNAFFECTED",
+      "confidence": 0.85,
+      "rationale": "The wording changed without altering what the source states, so the question still has the same correct answer.",
+      "evidence": [
+        "Managers must approve every leave request."
+      ],
+      "unanimous": true,
+      "patch": null,
+      "rejected_patch": null,
+      "changes": [
+        {
+          "content": "MODIFIED",
+          "position": "STABLE",
+          "old": {
+            "span_id": "leave-policy.md#p0.s1",
+            "doc_id": "leave-policy.md",
+            "section_path": [
+              "Leave Policy"
+            ],
+            "order": 1,
+            "text": "Managers must approve all leave requests.",
+            "norm_text": "Managers must approve all leave requests.",
+            "hash": "71edfb98d7008a27"
+          },
+          "new": {
+            "span_id": "leave-policy.md#p0.s1",
+            "doc_id": "leave-policy.md",
+            "section_path": [
+              "Leave Policy"
+            ],
+            "order": 1,
+            "text": "Managers must approve every leave request.",
+            "norm_text": "Managers must approve every leave request.",
+            "hash": "fecc8a449b595de6"
+          },
+          "similarity": 0.891566265060241,
+          "pair_score": 0.891566265060241,
+          "reordered": false,
+          "inline_diff": "Managers must approve [-all-]{+every+} leave [-requests.-]{+request.+}",
+          "across_docs": false
+        }
+      ],
+      "anchors": [
+        {
+          "ref": {
+            "doc_id": "leave-policy.md",
+            "span_id": "leave-policy.md#p0.s1",
+            "snapshot_text": "Managers must approve all leave requests.",
+            "snapshot_hash": "71edfb98d7008a27",
+            "inferred": false,
+            "infer_score": null
+          },
+          "status": "RESOLVED",
+          "new_span": {
+            "span_id": "leave-policy.md#p0.s1",
+            "doc_id": "leave-policy.md",
+            "section_path": [
+              "Leave Policy"
+            ],
+            "order": 1,
+            "text": "Managers must approve every leave request.",
+            "norm_text": "Managers must approve every leave request.",
+            "hash": "fecc8a449b595de6"
+          },
+          "candidates": [],
+          "similarity": 0.891566265060241
+        }
+      ],
+      "inferred_provenance": false,
+      "model_calls": 1,
+      "cache_hits": 0
+    },
+    {
+      "item_id": "q05",
+      "level_id": "L1",
+      "route": "OK",
+      "reasons": [
+        "source changed only in ways that cannot affect the question (IDENTICAL)"
+      ],
+      "verdict": null,
+      "confidence": null,
+      "rationale": "",
+      "evidence": [],
+      "unanimous": true,
+      "patch": null,
+      "rejected_patch": null,
+      "changes": [
+        {
+          "content": "IDENTICAL",
+          "position": "STABLE",
+          "old": {
+            "span_id": "leave-policy.md#p1.s0",
+            "doc_id": "leave-policy.md",
+            "section_path": [
+              "Leave Policy",
+              "Carry-over"
+            ],
+            "order": 3,
+            "text": "Up to five days may be carried into the following year.",
+            "norm_text": "Up to five days may be carried into the following year.",
+            "hash": "a3ffe34383903899"
+          },
+          "new": {
+            "span_id": "leave-policy.md#p2.s0",
+            "doc_id": "leave-policy.md",
+            "section_path": [
+              "Leave Policy",
+              "Carry-over"
+            ],
+            "order": 4,
+            "text": "Up to five days may be carried into the following year.",
+            "norm_text": "Up to five days may be carried into the following year.",
+            "hash": "a3ffe34383903899"
+          },
+          "similarity": 1.0,
+          "pair_score": 1.0,
+          "reordered": false,
+          "inline_diff": null,
+          "across_docs": false
+        }
+      ],
+      "anchors": [
+        {
+          "ref": {
+            "doc_id": "leave-policy.md",
+            "span_id": "leave-policy.md#p1.s0",
+            "snapshot_text": "Up to five days may be carried into the following year.",
+            "snapshot_hash": "a3ffe34383903899",
+            "inferred": false,
+            "infer_score": null
+          },
+          "status": "RESOLVED",
+          "new_span": {
+            "span_id": "leave-policy.md#p2.s0",
+            "doc_id": "leave-policy.md",
+            "section_path": [
+              "Leave Policy",
+              "Carry-over"
+            ],
+            "order": 4,
+            "text": "Up to five days may be carried into the following year.",
+            "norm_text": "Up to five days may be carried into the following year.",
+            "hash": "a3ffe34383903899"
+          },
+          "candidates": [],
+          "similarity": 1.0
+        }
+      ],
+      "inferred_provenance": false,
+      "model_calls": 0,
+      "cache_hits": 0
+    },
+    {
+      "item_id": "q04",
+      "level_id": "L1",
+      "route": "OK",
+      "reasons": [
+        "source changed only in ways that cannot affect the question (IDENTICAL)"
+      ],
+      "verdict": null,
+      "confidence": null,
+      "rationale": "",
+      "evidence": [],
+      "unanimous": true,
+      "patch": null,
+      "rejected_patch": null,
+      "changes": [
+        {
+          "content": "IDENTICAL",
+          "position": "MOVED",
+          "old": {
+            "span_id": "onboarding.md#p0.s0",
+            "doc_id": "onboarding.md",
+            "section_path": [
+              "Onboarding"
+            ],
+            "order": 0,
+            "text": "Parental leave runs for twelve consecutive weeks.",
+            "norm_text": "Parental leave runs for twelve consecutive weeks.",
+            "hash": "1d657a743916d287"
+          },
+          "new": {
+            "span_id": "leave-policy.md#p3.s0",
+            "doc_id": "leave-policy.md",
+            "section_path": [
+              "Leave Policy",
+              "Parental Leave"
+            ],
+            "order": 5,
+            "text": "Parental leave runs for twelve consecutive weeks.",
+            "norm_text": "Parental leave runs for twelve consecutive weeks.",
+            "hash": "1d657a743916d287"
+          },
+          "similarity": 1.0,
+          "pair_score": 1.0,
+          "reordered": false,
+          "inline_diff": null,
+          "across_docs": true
+        }
+      ],
+      "anchors": [
+        {
+          "ref": {
+            "doc_id": "onboarding.md",
+            "span_id": "onboarding.md#p0.s0",
+            "snapshot_text": "Parental leave runs for twelve consecutive weeks.",
+            "snapshot_hash": "1d657a743916d287",
+            "inferred": false,
+            "infer_score": null
+          },
+          "status": "MOVED",
+          "new_span": {
+            "span_id": "leave-policy.md#p3.s0",
+            "doc_id": "leave-policy.md",
+            "section_path": [
+              "Leave Policy",
+              "Parental Leave"
+            ],
+            "order": 5,
+            "text": "Parental leave runs for twelve consecutive weeks.",
+            "norm_text": "Parental leave runs for twelve consecutive weeks.",
+            "hash": "1d657a743916d287"
+          },
+          "candidates": [],
+          "similarity": 1.0
+        }
+      ],
+      "inferred_provenance": false,
+      "model_calls": 0,
+      "cache_hits": 0
+    },
+    {
+      "item_id": "q06",
+      "level_id": "L2",
+      "route": "OK",
+      "reasons": [
+        "source changed only in ways that cannot affect the question (IDENTICAL)"
+      ],
+      "verdict": null,
+      "confidence": null,
+      "rationale": "",
+      "evidence": [],
+      "unanimous": true,
+      "patch": null,
+      "rejected_patch": null,
+      "changes": [
+        {
+          "content": "IDENTICAL",
+          "position": "MOVED",
+          "old": {
+            "span_id": "security-handbook.md#p2.s0",
+            "doc_id": "security-handbook.md",
+            "section_path": [
+              "Data Retention"
+            ],
+            "order": 4,
+            "text": "Audit logs are kept for ninety days.",
+            "norm_text": "Audit logs are kept for ninety days.",
+            "hash": "c8c21ace8c9df1d7"
+          },
+          "new": {
+            "span_id": "security-handbook.md#p0.s0",
+            "doc_id": "security-handbook.md",
+            "section_path": [
+              "Data Retention"
+            ],
+            "order": 0,
+            "text": "Audit logs are kept for ninety days.",
+            "norm_text": "Audit logs are kept for ninety days.",
+            "hash": "c8c21ace8c9df1d7"
+          },
+          "similarity": 1.0,
+          "pair_score": 1.0,
+          "reordered": false,
+          "inline_diff": null,
+          "across_docs": false
+        }
+      ],
+      "anchors": [
+        {
+          "ref": {
+            "doc_id": "security-handbook.md",
+            "span_id": "security-handbook.md#p2.s0",
+            "snapshot_text": "Audit logs are kept for ninety days.",
+            "snapshot_hash": "c8c21ace8c9df1d7",
+            "inferred": false,
+            "infer_score": null
+          },
+          "status": "RESOLVED",
+          "new_span": {
+            "span_id": "security-handbook.md#p0.s0",
+            "doc_id": "security-handbook.md",
+            "section_path": [
+              "Data Retention"
+            ],
+            "order": 0,
+            "text": "Audit logs are kept for ninety days.",
+            "norm_text": "Audit logs are kept for ninety days.",
+            "hash": "c8c21ace8c9df1d7"
+          },
+          "candidates": [],
+          "similarity": 1.0
+        }
+      ],
+      "inferred_provenance": false,
+      "model_calls": 0,
+      "cache_hits": 0
+    },
+    {
+      "item_id": "q08",
+      "level_id": "L2",
+      "route": "OK",
+      "reasons": [
+        "source changed only in ways that cannot affect the question (IDENTICAL)"
+      ],
+      "verdict": null,
+      "confidence": null,
+      "rationale": "",
+      "evidence": [],
+      "unanimous": true,
+      "patch": null,
+      "rejected_patch": null,
+      "changes": [
+        {
+          "content": "IDENTICAL",
+          "position": "STABLE",
+          "old": {
+            "span_id": "security-handbook.md#p0.s0",
+            "doc_id": "security-handbook.md",
+            "section_path": [
+              "Access Control"
+            ],
+            "order": 0,
+            "text": "All accounts require multi-factor authentication.",
+            "norm_text": "All accounts require multi-factor authentication.",
+            "hash": "11aa428bb3c66544"
+          },
+          "new": {
+            "span_id": "security-handbook.md#p1.s0",
+            "doc_id": "security-handbook.md",
+            "section_path": [
+              "Access Control"
+            ],
+            "order": 2,
+            "text": "All accounts require multi-factor authentication.",
+            "norm_text": "All accounts require multi-factor authentication.",
+            "hash": "11aa428bb3c66544"
+          },
+          "similarity": 1.0,
+          "pair_score": 1.0,
+          "reordered": false,
+          "inline_diff": null,
+          "across_docs": false
+        }
+      ],
+      "anchors": [
+        {
+          "ref": {
+            "doc_id": "security-handbook.md",
+            "span_id": "security-handbook.md#p0.s0",
+            "snapshot_text": "All accounts require multi-factor authentication.",
+            "snapshot_hash": "11aa428bb3c66544",
+            "inferred": false,
+            "infer_score": null
+          },
+          "status": "RESOLVED",
+          "new_span": {
+            "span_id": "security-handbook.md#p1.s0",
+            "doc_id": "security-handbook.md",
+            "section_path": [
+              "Access Control"
+            ],
+            "order": 2,
+            "text": "All accounts require multi-factor authentication.",
+            "norm_text": "All accounts require multi-factor authentication.",
+            "hash": "11aa428bb3c66544"
+          },
+          "candidates": [],
+          "similarity": 1.0
+        }
+      ],
+      "inferred_provenance": false,
+      "model_calls": 0,
+      "cache_hits": 0
+    },
+    {
+      "item_id": "q07",
+      "level_id": "L2",
+      "route": "OK",
+      "reasons": [
+        "source changed only in ways that cannot affect the question (COSMETIC)"
+      ],
+      "verdict": null,
+      "confidence": null,
+      "rationale": "",
+      "evidence": [],
+      "unanimous": true,
+      "patch": null,
+      "rejected_patch": null,
+      "changes": [
+        {
+          "content": "COSMETIC",
+          "position": "STABLE",
+          "old": {
+            "span_id": "security-handbook.md#p4.s0",
+            "doc_id": "security-handbook.md",
+            "section_path": [
+              "Physical Security"
+            ],
+            "order": 7,
+            "text": "Badges must be worn visibly at all times.",
+            "norm_text": "Badges must be worn visibly at all times.",
+            "hash": "ba55f63073a21e89"
+          },
+          "new": {
+            "span_id": "security-handbook.md#p4.s0",
+            "doc_id": "security-handbook.md",
+            "section_path": [
+              "Physical Security"
+            ],
+            "order": 7,
+            "text": "Badges must be worn, visibly, at all times.",
+            "norm_text": "Badges must be worn, visibly, at all times.",
+            "hash": "6d7ab7dfaba08d22"
+          },
+          "similarity": 0.9761904761904762,
+          "pair_score": 0.9761904761904762,
+          "reordered": false,
+          "inline_diff": "Badges must be [-worn visibly-]{+worn, visibly,+} at all times.",
+          "across_docs": false
+        }
+      ],
+      "anchors": [
+        {
+          "ref": {
+            "doc_id": "security-handbook.md",
+            "span_id": "security-handbook.md#p4.s0",
+            "snapshot_text": "Badges must be worn visibly at all times.",
+            "snapshot_hash": "ba55f63073a21e89",
+            "inferred": false,
+            "infer_score": null
+          },
+          "status": "RESOLVED",
+          "new_span": {
+            "span_id": "security-handbook.md#p4.s0",
+            "doc_id": "security-handbook.md",
+            "section_path": [
+              "Physical Security"
+            ],
+            "order": 7,
+            "text": "Badges must be worn, visibly, at all times.",
+            "norm_text": "Badges must be worn, visibly, at all times.",
+            "hash": "6d7ab7dfaba08d22"
+          },
+          "candidates": [],
+          "similarity": 0.9761904761904762
+        }
+      ],
+      "inferred_provenance": false,
+      "model_calls": 0,
+      "cache_hits": 0
+    }
+  ],
+  "documents": {
+    "unchanged": [
+      "benefits.md"
+    ],
+    "modified": [
+      "expenses.md",
+      "leave-policy.md",
+      "security-handbook.md"
+    ],
+    "added": [
+      "vendor-notes.md"
+    ],
+    "deleted": [
+      "onboarding.md"
+    ]
+  },
+  "span_counts": {
+    "IDENTICAL/STABLE": 7,
+    "IDENTICAL/REPARENTED": 1,
+    "REMOVED/NONE": 2,
+    "MODIFIED/STABLE": 4,
+    "ADDED/NONE": 3,
+    "IDENTICAL/MOVED": 4,
+    "COSMETIC/STABLE": 1
+  },
+  "section_counts": {
+    "SAME": 9,
+    "RENAMED": 1,
+    "REMOVED": 1,
+    "ADDED": 1
+  },
+  "model_calls": 8,
+  "cache_hits": 0,
+  "warnings": [],
+  "generated_at": null
+}

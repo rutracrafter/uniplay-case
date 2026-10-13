@@ -80,7 +80,7 @@ Sections:
 
 *Level L3*
 
-**Why:** 1 source span(s) require judgment; a source span moved to a different section while its text stayed the same
+**Why:** 1 source span(s) require judgment; a source span moved to a different section with its wording essentially unchanged
 
 **Verdict:** UNAFFECTED at confidence 0.85
 

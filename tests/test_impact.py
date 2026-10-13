@@ -3,6 +3,10 @@
 `requires_adjudication` is the two-axis table from OVERVIEW.md, and it is
 tested as a truth table because every model call the system makes or skips
 hangs off it.
+
+Note the COSMETIC / REPARENTED row in particular: the axes are evaluated
+independently, so a trivial text edit cannot suppress the question of whether
+the span changed context.
 """
 
 from __future__ import annotations
@@ -30,8 +34,6 @@ def _span(span_id: str = "d.md#p0.s0") -> Span:
         span_id=span_id,
         doc_id="d.md",
         section_path=("A",),
-        para_index=0,
-        sent_index=0,
         order=0,
         text="Notice is 30 days.",
         norm_text="Notice is 30 days.",
@@ -50,7 +52,7 @@ def _span(span_id: str = "d.md#p0.s0") -> Span:
         (ContentOp.IDENTICAL, PositionOp.REPARENTED, True),
         (ContentOp.COSMETIC, PositionOp.STABLE, False),
         (ContentOp.COSMETIC, PositionOp.MOVED, False),
-        (ContentOp.COSMETIC, PositionOp.REPARENTED, False),
+        (ContentOp.COSMETIC, PositionOp.REPARENTED, True),
         (ContentOp.MODIFIED, PositionOp.STABLE, True),
         (ContentOp.MODIFIED, PositionOp.MOVED, True),
         (ContentOp.MODIFIED, PositionOp.REPARENTED, True),
@@ -287,3 +289,62 @@ def test_skip_stats_account_for_every_item(build: SnapshotBuilder) -> None:
     assert stats.total_items == len(items)
     assert stats.accounted == stats.total_items
     assert len(candidates) == len(items)
+
+
+def test_a_cosmetic_edit_cannot_hide_a_reparenting(build: SnapshotBuilder) -> None:
+    """Regression: the two axes used to collide.
+
+    The reparenting question was asked only when the content op was
+    IDENTICAL. Adding a comma to a sentence that also moved into a
+    "Deprecated Practices" section made the content op COSMETIC, so the move
+    was never examined and the item was dismissed as trivial — the
+    irrelevant half of the change hiding the dangerous half.
+    """
+    moved = "Badges must be worn visibly at all times"
+    before = (
+        f"# Mandatory\n\n{moved}.\nTraining is required yearly.\n\n"
+        "# Deprecated\n\nPaper forms are no longer accepted.\n"
+    )
+    after = (
+        "# Mandatory\n\nTraining is required yearly.\n\n"
+        "# Deprecated\n\nPaper forms are no longer accepted.\n"
+        "Badges must be worn, visibly, at all times.\n"
+    )
+    candidates, _ = _run(build, {"d.md": before}, {"d.md": after}, moved)
+    candidate = candidates[0]
+
+    change = candidate.changes[0]
+    assert change.content is ContentOp.COSMETIC, "the comma really is cosmetic"
+    assert change.position is PositionOp.REPARENTED, "and it really did change section"
+    assert candidate.needs_model is True
+    assert candidate.has_reparenting is True
+
+
+def test_a_cosmetic_edit_that_does_not_move_is_still_skipped(
+    build: SnapshotBuilder,
+) -> None:
+    """The fix must not drag ordinary cosmetic edits into the model queue."""
+    candidates, stats = _run(
+        build,
+        {"p.md": "# P\n\nBadges must be worn visibly at all times.\n"},
+        {"p.md": "# P\n\nBadges must be worn, visibly, at all times.\n"},
+        "Badges must be worn",
+    )
+    assert candidates[0].changes[0].content is ContentOp.COSMETIC
+    assert candidates[0].needs_model is False
+    assert stats.sent_to_model == 0
+
+
+def test_a_removed_span_is_never_pulled_in_by_the_position_check(
+    build: SnapshotBuilder,
+) -> None:
+    """Removals keep position NONE, so the new first clause cannot catch them."""
+    candidates, _ = _run(
+        build,
+        {"e.md": "# E\n\nSubmit receipts.\n\n## Per-diem\n\nThe daily rate is fixed.\n"},
+        {"e.md": "# E\n\nSubmit receipts.\n"},
+        "daily rate",
+    )
+    assert candidates[0].changes[0].position is PositionOp.NONE
+    assert candidates[0].needs_model is False
+    assert candidates[0].preset_route is Route.RETIRE_SUGGESTED

@@ -6,6 +6,7 @@ model-mediated half is added in phase 6 and the report in phase 7.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 from pydantic import BaseModel, Field
@@ -13,13 +14,19 @@ from pydantic import BaseModel, Field
 from coursedrift.adjudicate import BROKEN, adjudicate, gather
 from coursedrift.anchor import AnchorReport, resolve_course
 from coursedrift.config import Config
-from coursedrift.corpus import diff_manifests, load_course, load_snapshot
+from coursedrift.corpus import (
+    check_snapshot_pair,
+    diff_manifests,
+    load_course,
+    load_snapshot,
+)
 from coursedrift.diff import MatchResult, match_corpus
 from coursedrift.impact import ImpactCandidate, SkipStats, build_candidates
 from coursedrift.llm.base import CallBudget, CallOutcome, LLMClient
 from coursedrift.llm.cache import Cache
 from coursedrift.llm.fake import FakeClient
-from coursedrift.models import Course, ManifestDiff, Snapshot
+from coursedrift.models import Course, ManifestDiff, Route, Snapshot
+from coursedrift.progress import NullProgress, Progress
 from coursedrift.remediate import Patch, remediate
 from coursedrift.report import RunReport, sort_findings
 from coursedrift.triage import Finding, route_candidate
@@ -41,16 +48,39 @@ class Prepared(BaseModel):
         return [c for c in self.candidates if c.needs_model]
 
 
-def prepare(old_dir: Path, new_dir: Path, course_path: Path, cfg: Config) -> Prepared:
+def prepare(
+    old_dir: Path,
+    new_dir: Path,
+    course_path: Path,
+    cfg: Config,
+    progress: Progress | None = None,
+) -> Prepared:
     """Run stages 1 through 6: no model is involved and none is needed."""
+    report = progress or NullProgress()
+
+    report.stage("Reading documents")
     old = load_snapshot(old_dir)
     new = load_snapshot(new_dir)
     course = load_course(course_path)
+    check_snapshot_pair(old, new, allow_empty_new=cfg.allow_empty_new_snapshot)
+    report.done(f"{len(old.docs)} old, {len(new.docs)} new, {len(course.items)} questions")
 
+    report.stage("Matching spans")
     manifest = diff_manifests(old, new)
     matches = match_corpus(old, new, cfg, manifest)
+    report.done(
+        f"{len(matches.real_changes())} change(s) across "
+        f"{len(manifest.touched)} touched document(s)"
+    )
+
+    report.stage("Anchoring questions to their sources")
     anchors = resolve_course(course, old, new, cfg, matches=matches)
     candidates, stats = build_candidates(course, matches, anchors, cfg)
+    report.done(
+        f"{stats.sent_to_model} of {stats.total_items} need judgment; "
+        f"{stats.untouched + stats.skipped_no_impact} unaffected, "
+        f"{stats.decided_deterministically} decided without a model"
+    )
 
     return Prepared(
         old=old,
@@ -71,16 +101,23 @@ def judge_candidate(
     cfg: Config,
     cache: Cache,
     budget: CallBudget,
+    on_step: Callable[[str], None] | None = None,
 ) -> Finding:
     """Stages 7 to 9 for one item: adjudicate, maybe remediate, route.
 
     Remediation is only attempted for a broken verdict that already clears
     the confidence floor, so no fix is ever paid for on an item that triage
     would send to review regardless.
+
+    `on_step` is called before each model call, so a caller can show that a
+    slow call is in flight rather than letting the process look hung.
     """
     if candidate.preset_route is not None:
         return route_candidate(candidate, None, None, cfg)
 
+    if on_step:
+        votes = f" ({cfg.votes} votes)" if cfg.votes > 1 else ""
+        on_step(f"asking the model{votes}")
     adjudication = adjudicate(candidate, new, client, cfg, cache, budget)
 
     patch_outcome: CallOutcome[Patch] | None = None
@@ -91,6 +128,8 @@ def judge_candidate(
         and adjudication.unanimous
     )
     if worth_fixing:
+        if on_step:
+            on_step("proposing a fix")
         patch_outcome = remediate(
             candidate,
             adjudication,
@@ -105,18 +144,44 @@ def judge_candidate(
     return route_candidate(candidate, adjudication, patch_outcome, cfg)
 
 
+def _outcome_line(finding: Finding) -> str:
+    verdict = finding.verdict.value if finding.verdict else "no verdict"
+    return f"{finding.item_id}: {verdict} -> {finding.route.value}"
+
+
 def judge_all(
     prepared: Prepared,
     client: LLMClient,
     cfg: Config,
     cache: Cache,
     budget: CallBudget,
+    progress: Progress | None = None,
 ) -> list[Finding]:
     """Judge every candidate, in a stable order."""
-    return [
-        judge_candidate(candidate, prepared.new, client, cfg, cache, budget)
-        for candidate in prepared.candidates
-    ]
+    report = progress or NullProgress()
+    total = len(prepared.queued())
+    if total:
+        report.stage(f"Judging {total} question(s) using {client.name}")
+
+    findings: list[Finding] = []
+    judged = 0
+    for candidate in prepared.candidates:
+        on_step: Callable[[str], None] | None = None
+        if candidate.needs_model:
+            judged += 1
+            position = f"[{judged}/{total}]"
+            item_id = candidate.item.item_id
+
+            def on_step(message: str, _p: str = position, _i: str = item_id) -> None:
+                report.working(f"{_p} {_i} - {message}...")
+
+        finding = judge_candidate(
+            candidate, prepared.new, client, cfg, cache, budget, on_step=on_step
+        )
+        if candidate.needs_model:
+            report.done(f"[{judged}/{total}] {_outcome_line(finding)}")
+        findings.append(finding)
+    return findings
 
 
 def build_client(
@@ -147,6 +212,7 @@ def run_drift(
     cache: Cache,
     *,
     labels: tuple[str, str] | None = None,
+    progress: Progress | None = None,
 ) -> RunReport:
     """The whole pipeline, stages 1 through 10.
 
@@ -154,11 +220,17 @@ def run_drift(
     The demo passes repo-relative names so its output does not embed an
     absolute path, which would make the golden report machine-specific.
     """
-    prepared = prepare(old_dir, new_dir, course_path, cfg)
+    report = progress or NullProgress()
+    prepared = prepare(old_dir, new_dir, course_path, cfg, progress=report)
     budget = CallBudget(cfg.max_calls)
-    findings = sort_findings(judge_all(prepared, client, cfg, cache, budget))
+    findings = sort_findings(judge_all(prepared, client, cfg, cache, budget, progress=report))
+    counts: dict[str, int] = {}
+    for finding in findings:
+        counts[finding.route.value] = counts.get(finding.route.value, 0) + 1
+    report.stage("Done: " + ", ".join(f"{n} {route}" for route, n in sorted(counts.items())))
 
     return RunReport(
+        warnings=_input_warnings(findings, cfg),
         course_id=prepared.course.course_id,
         course_title=prepared.course.title,
         old_root=labels[0] if labels else str(old_dir),
@@ -178,3 +250,27 @@ def run_drift(
         model_calls=sum(f.model_calls for f in findings),
         cache_hits=sum(f.cache_hits for f in findings),
     )
+
+
+def _input_warnings(findings: list[Finding], cfg: Config) -> list[str]:
+    """Flag results that look more like a bad input than a real finding.
+
+    An empty new snapshot is refused outright in `check_snapshot_pair`. This
+    catches the softer version: a path that points somewhere real but wrong,
+    or a checkout missing most of the corpus, where a large share of the
+    course orphans at once. The run still produces its report — nothing here
+    is ever applied — but it says plainly that the input looks wrong instead
+    of presenting mass retirement as an ordinary outcome.
+    """
+    if not findings:
+        return []
+    retiring = sum(1 for f in findings if f.route is Route.RETIRE_SUGGESTED)
+    share = retiring / len(findings)
+    if share < cfg.retire_alarm_fraction:
+        return []
+    return [
+        f"{retiring} of {len(findings)} course items ({share:.0%}) lost their source "
+        "material entirely. That is usually a wrong --new path or an incomplete "
+        "snapshot rather than a real deletion — check the input before acting on "
+        "this report."
+    ]

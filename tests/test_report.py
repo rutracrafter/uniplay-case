@@ -17,8 +17,6 @@ def _span(doc: str = "a.md", order: int = 0, section: tuple[str, ...] = ("A",)) 
         span_id=f"{doc}#p{order}.s0",
         doc_id=doc,
         section_path=section,
-        para_index=order,
-        sent_index=0,
         order=order,
         text="Notice is 30 days.",
         norm_text="Notice is 30 days.",

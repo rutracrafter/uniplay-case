@@ -9,4 +9,19 @@ dist/
 build/
 *.egg-info/
 out/
-scratch/
+# Local scratch space is ignored, except the small corpus the README's
+# live-demo walkthrough asks a reader to run against. Only .md is kept, so
+# whatever that run generates (test_course.json, test-report/, .drift_cache/)
+# stays out.
+scratch/*
+!scratch/user-testing/
+scratch/user-testing/*
+!scratch/user-testing/docs_v1/
+!scratch/user-testing/docs_v2/
+scratch/user-testing/docs_v1/*
+scratch/user-testing/docs_v2/*
+!scratch/user-testing/docs_v1/*.md
+!scratch/user-testing/docs_v2/*.md
+.DS_Store
+.coverage
+htmlcov/

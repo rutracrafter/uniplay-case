@@ -161,7 +161,6 @@ class _Builder:
         self._current = {
             "path": (),
             "heading": "",
-            "level": 0,
             "hashes": set(),
             "order": self._section_order,
         }
@@ -175,7 +174,6 @@ class _Builder:
         self._current = {
             "path": tuple(h for _, h in self._stack),
             "heading": heading,
-            "level": level,
             "hashes": set(),
             "order": self._section_order,
         }
@@ -197,7 +195,6 @@ class _Builder:
                 doc_id=self.doc_id,
                 path=path,
                 heading=str(cur["heading"]),
-                level=int(cur["level"]),  # type: ignore[call-overload]
                 span_hashes=frozenset(hashes),
                 order=int(cur["order"]),  # type: ignore[call-overload]
             )
@@ -228,8 +225,6 @@ class _Builder:
                     span_id=f"{self.doc_id}#p{self._para}.s{sent_index}",
                     doc_id=self.doc_id,
                     section_path=self.section_path,
-                    para_index=self._para,
-                    sent_index=sent_index,
                     order=self._order,
                     text=piece,
                     norm_text=norm,

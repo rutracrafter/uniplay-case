@@ -885,6 +885,32 @@ will differ from the scripted fake — that is expected and is not a test failur
 
 ---
 
+## Deferred, with reasons
+
+**A performance guard on Phase B.** The design claims shingle blocking keeps
+candidate scoring near-linear rather than quadratic, and nothing asserts it. A
+smoke test over a few hundred spans with a wall-clock budget would catch an
+accidental return to O(n²) — for instance a future edit that widens the
+candidate set, or drops the blocking index while keeping the scorer.
+
+Deferred because the fixture corpus is small enough that a regression would
+not show up in it, so the test would need a generated corpus and a timing
+threshold tuned to whatever machine runs it — which is how flaky tests are
+born. Worth adding if the corpus ever grows past a few thousand spans, or
+alongside the first real document set.
+
+What exists in the meantime: `block_width` and the shingle index are both
+covered by behavioural tests, so the mechanism cannot be deleted silently —
+only made slower.
+
+**Other things deliberately not tested at this scope:** mutation testing,
+concurrency (the pipeline is single-threaded by design), load and stress,
+prompt snapshot tests (brittle, and the prompt wire format is already
+asserted through `read_block`), and contract tests against a real course
+generator, since no such interface exists yet.
+
+---
+
 ## Definition of done, whole project
 
 - `make demo` — one command, no network, no model, covers all ten cases

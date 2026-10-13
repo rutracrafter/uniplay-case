@@ -179,10 +179,12 @@ def route_candidate(
     if candidate.inferred_provenance:
         return review("provenance was inferred, not recorded")
 
-    # 7 — same words, different context: the weakest case for text-only judgment.
+    # 7 — same material, different context: the weakest case for text-only
+    # judgment. Reached whether the text is byte-identical or only cosmetically
+    # edited, so a stray comma cannot hide a move between sections.
     if candidate.has_reparenting:
         return review(
-            "a source span moved to a different section while its text stayed the same"
+            "a source span moved to a different section with its wording essentially unchanged"
         )
 
     # 8 — same words, different order. The same species of weakness as

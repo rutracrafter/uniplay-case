@@ -294,3 +294,59 @@ def test_cosmetic_still_fires_on_the_order_sensitive_score(build: SnapshotBuilde
     change = match_corpus(old, new, Config()).changes[0]
     assert change.content is ContentOp.COSMETIC
     assert change.reordered is False
+
+
+def test_identical_text_in_two_reordered_sections_does_not_reparent(
+    build: SnapshotBuilder,
+) -> None:
+    """Pinned from a property-test failure.
+
+    The same sentence appears once under each of two headings. Reorder the
+    headings and a naive duplicate pairing crosses them, reporting a span
+    that moved between sections when each heading still holds its own copy.
+    """
+    line = "All employees must comply with this notice."
+    old = build(
+        "v1", {"d.md": f"# Access Control\n\n{line}\n\n# Incident Response\n\n{line}\n"}
+    )
+    new = build(
+        "v2", {"d.md": f"# Incident Response\n\n{line}\n\n# Access Control\n\n{line}\n"}
+    )
+    result = match_corpus(old, new, Config())
+
+    assert {c.content for c in result.changes} == {ContentOp.IDENTICAL}
+    assert not [c for c in result.changes if c.position is PositionOp.REPARENTED]
+    for change in result.changes:
+        assert change.old is not None and change.new is not None
+        assert change.old.section_path == change.new.section_path
+
+
+def test_a_duplicate_that_really_does_change_section_still_reparents(
+    build: SnapshotBuilder,
+) -> None:
+    """The section preference must not silence a genuine move.
+
+    Each section keeps its own distinct content so none of them can be
+    explained away as a rename, and one of the two duplicate copies moves
+    from Beta into Gamma. That copy really did move.
+    """
+    line = "All employees must comply with this notice."
+    old = build(
+        "v1",
+        {
+            "d.md": f"# Alpha\n\n{line}\n\n# Beta\n\nBeta owns this sentence.\n"
+            f"{line}\n\n# Gamma\n\nGamma owns this other sentence.\n"
+        },
+    )
+    new = build(
+        "v2",
+        {
+            "d.md": f"# Alpha\n\n{line}\n\n# Beta\n\nBeta owns this sentence.\n\n"
+            f"# Gamma\n\nGamma owns this other sentence.\n{line}\n"
+        },
+    )
+    result = match_corpus(old, new, Config())
+    reparented = [c for c in result.changes if c.position is PositionOp.REPARENTED]
+    assert len(reparented) == 1
+    assert reparented[0].old is not None and reparented[0].old.section_path == ("Beta",)
+    assert reparented[0].new is not None and reparented[0].new.section_path == ("Gamma",)

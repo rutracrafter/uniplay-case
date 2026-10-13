@@ -16,7 +16,7 @@ from __future__ import annotations
 import difflib
 import re
 from collections import defaultdict
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -336,27 +336,47 @@ class _Pair:
 def _zip_duplicate_group(
     olds: list[Span], news: list[Span]
 ) -> tuple[list[tuple[Span, Span]], list[Span], list[Span]]:
-    """Pair equal-hash spans, preferring same-document partners.
+    """Pair equal-hash spans, preferring the closest partner available.
 
-    Within a duplicate group the pairing must be deterministic. Same document
-    first, in document order, so unrelated boilerplate in another file cannot
-    steal a partner and produce a phantom cross-document move; whatever is
-    left over pairs across documents, which is a real move.
+    Within a duplicate group every candidate is textually identical, so the
+    matcher has to choose — and the choice is arbitrary, which means it must
+    not manufacture a signal. Preference runs in three tiers: same document
+    and same section, then same document, then anywhere.
+
+    Both of the lower tiers exist to avoid a specific false positive.
+
+    Without the section tier, a sentence appearing once under each of two
+    headings pairs across them when those headings are reordered, and
+    `_apply_reparenting` reports a span that moved between sections when
+    nothing moved at all — each heading still contains its copy. Found by
+    `test_properties.py`, which generates exactly this.
+
+    Without the document tier, unrelated boilerplate in another file can
+    steal a partner and produce a phantom cross-document move. Whatever is
+    left after both tiers pairs across documents, which is a real move.
     """
     pairs: list[tuple[Span, Span]] = []
     pool = list(news)
-    leftover_old: list[Span] = []
 
-    for old in olds:
-        partner = next((n for n in pool if n.doc_id == old.doc_id), None)
-        if partner is None:
-            leftover_old.append(old)
-            continue
-        pool.remove(partner)
-        pairs.append((old, partner))
+    def claim(candidates: list[Span], matches: Callable[[Span, Span], bool]) -> list[Span]:
+        unclaimed: list[Span] = []
+        for old in candidates:
+            partner = next((n for n in pool if matches(old, n)), None)
+            if partner is None:
+                unclaimed.append(old)
+                continue
+            pool.remove(partner)
+            pairs.append((old, partner))
+        return unclaimed
+
+    remaining = claim(
+        list(olds),
+        lambda o, n: o.doc_id == n.doc_id and o.section_path == n.section_path,
+    )
+    remaining = claim(remaining, lambda o, n: o.doc_id == n.doc_id)
 
     still_unmatched: list[Span] = []
-    for old in leftover_old:
+    for old in remaining:
         if pool:
             pairs.append((old, pool.pop(0)))
         else:
