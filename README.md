@@ -9,7 +9,7 @@ everything else to a human with the evidence attached.
 ```bash
 uv sync        # once
 make demo      # seeded end-to-end run: no network, no model, no flags
-make test      # 333 tests
+make test      # 341 tests
 make check     # ruff + mypy
 ```
 

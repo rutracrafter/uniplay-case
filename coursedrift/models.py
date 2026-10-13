@@ -11,7 +11,7 @@ from collections.abc import Iterator
 from enum import StrEnum
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class Route(StrEnum):
@@ -173,6 +173,30 @@ class CourseItem(BaseModel):
     options: list[str]
     correct_index: int
     provenance: list[ProvenanceRef] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _correct_index_in_range(self) -> CourseItem:
+        """Reject a question whose keyed answer does not exist.
+
+        On the model rather than in the loader, so it holds however a
+        CourseItem is built — from a file, from `drift seed`, or in a test.
+
+        Without it, `correct_index: 7` against two options validates happily
+        and then raises IndexError the first time `correct_answer` is read,
+        which is deep inside adjudication or provenance inference. That is an
+        uncaught crash mid-run, and the rest of the system is built so that
+        failures become routed findings instead. It was also backwards:
+        `Patch`, which arrives from a language model, is checked for exactly
+        this, while a course file was not checked at all.
+        """
+        if not self.options:
+            raise ValueError(f"{self.item_id}: a question needs at least one option")
+        if not 0 <= self.correct_index < len(self.options):
+            raise ValueError(
+                f"{self.item_id}: correct_index {self.correct_index} is outside "
+                f"the {len(self.options)} option(s) supplied"
+            )
+        return self
 
     @property
     def correct_answer(self) -> str:

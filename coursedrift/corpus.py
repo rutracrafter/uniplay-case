@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 from pathlib import Path
 
 from coursedrift.models import Course, Document, ManifestDiff, Snapshot
@@ -65,5 +64,12 @@ def diff_manifests(old: Snapshot, new: Snapshot) -> ManifestDiff:
 
 
 def load_course(path: Path) -> Course:
-    """Load a course and validate it against the domain model."""
-    return Course.model_validate(json.loads(path.read_text(encoding="utf-8")))
+    """Load a course, validating shape and internal consistency.
+
+    The trust boundary for course input, which may come from `drift seed`,
+    from a real course generator, or from hand editing. Every stage after this
+    may assume an item's `correct_index` addresses an option that exists —
+    `CourseItem` enforces that, so a bad file fails here with the offending
+    item named rather than raising IndexError mid-run.
+    """
+    return Course.model_validate_json(path.read_text(encoding="utf-8"))

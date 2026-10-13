@@ -6,9 +6,10 @@ import json
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 from coursedrift.corpus import diff_manifests, load_course, load_snapshot
-from coursedrift.models import Course
+from coursedrift.models import Course, CourseItem
 
 
 def _write(root: Path, name: str, body: str) -> None:
@@ -122,3 +123,91 @@ def test_load_course_validates(tmp_path: Path) -> None:
     assert isinstance(course, Course)
     assert course.items[0].correct_answer == "30"
     assert course.levels() == ["L1"]
+
+
+# -- course validation -----------------------------------------------------
+#
+# These guard an invariant every later stage relies on: an item's
+# correct_index addresses an option that exists. Without it, a bad course
+# validates cleanly and then raises IndexError the first time correct_answer
+# is read — deep inside adjudication or provenance inference, as an uncaught
+# crash rather than a routed finding.
+
+
+def _course(**item_overrides: object) -> dict[str, object]:
+    item: dict[str, object] = {
+        "item_id": "q1",
+        "level_id": "L1",
+        "stem": "How many days?",
+        "options": ["30 days", "45 days"],
+        "correct_index": 0,
+        "provenance": [],
+    }
+    item.update(item_overrides)
+    return {"course_id": "c", "title": "T", "items": [item]}
+
+
+def _write_course(tmp_path: Path, payload: dict[str, object]) -> Path:
+    path = tmp_path / "course.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    return path
+
+
+def test_a_well_formed_course_loads(tmp_path: Path) -> None:
+    course = load_course(_write_course(tmp_path, _course()))
+    assert course.items[0].correct_answer == "30 days"
+
+
+def test_correct_index_past_the_end_is_rejected_at_load(tmp_path: Path) -> None:
+    with pytest.raises(ValidationError, match="correct_index 7 is outside the 2 option"):
+        load_course(_write_course(tmp_path, _course(correct_index=7)))
+
+
+def test_negative_correct_index_is_rejected(tmp_path: Path) -> None:
+    with pytest.raises(ValidationError, match="correct_index -1 is outside"):
+        load_course(_write_course(tmp_path, _course(correct_index=-1)))
+
+
+def test_a_question_with_no_options_is_rejected(tmp_path: Path) -> None:
+    with pytest.raises(ValidationError, match="needs at least one option"):
+        load_course(_write_course(tmp_path, _course(options=[])))
+
+
+def test_the_last_option_is_addressable(tmp_path: Path) -> None:
+    """An off-by-one here would reject every correctly-keyed final option."""
+    course = load_course(_write_course(tmp_path, _course(correct_index=1)))
+    assert course.items[0].correct_answer == "45 days"
+
+
+def test_the_error_names_the_offending_item(tmp_path: Path) -> None:
+    """A 100-item course needs to say which one is wrong."""
+    payload = _course()
+    items = payload["items"]
+    assert isinstance(items, list)
+    items.append(
+        {
+            "item_id": "q2-broken",
+            "level_id": "L1",
+            "stem": "Q?",
+            "options": ["a", "b"],
+            "correct_index": 9,
+        }
+    )
+    with pytest.raises(ValidationError, match="q2-broken"):
+        load_course(_write_course(tmp_path, payload))
+
+
+def test_the_rule_holds_outside_the_loader_too() -> None:
+    """On the model, not in load_course, so construction is guarded as well."""
+    with pytest.raises(ValidationError, match="outside the 2 option"):
+        CourseItem(
+            item_id="direct", level_id="L1", stem="Q?", options=["a", "b"], correct_index=5
+        )
+
+
+def test_the_bundled_fixture_course_is_valid() -> None:
+    fixtures = Path(__file__).resolve().parent.parent / "fixtures" / "course.json"
+    course = load_course(fixtures)
+    assert len(course.items) == 14
+    for item in course.items:
+        assert item.correct_answer in item.options
